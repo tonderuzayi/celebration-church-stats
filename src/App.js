@@ -640,12 +640,19 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
 
   const saveUser = async () => {
     if (!uForm.name || !uForm.email || !uForm.password) return;
+    const cleanUser = {
+      name: uForm.name.trim(),
+      email: uForm.email.trim().toLowerCase(),
+      password: uForm.password.trim(),
+      role: uForm.role,
+      branch: uForm.role === "admin" ? null : uForm.branch,
+    };
     const isNew = !editUId;
     if (editUId) {
-      setUsers(us => us.map(u => u.id === editUId ? { ...u, ...uForm } : u));
+      setUsers(us => us.map(u => u.id === editUId ? { ...u, ...cleanUser } : u));
       setEditUId(null);
     } else {
-      setUsers(us => [...us, { ...uForm, id: Date.now() }]);
+      setUsers(us => [...us, { ...cleanUser, id: Date.now() }]);
     }
     if (isNew) {
       setEmailStatus("sending");
@@ -818,9 +825,9 @@ function lsSet(key, value) {
 // ── EMAILJS HELPER ────────────────────────────────────────────────────────────
 // To enable emails: sign up free at emailjs.com, create a service + template,
 // then replace the three IDs below with your own.
-const EMAILJS_SERVICE  = "service_61m7n0f";   // e.g. "service_abc123"
-const EMAILJS_TEMPLATE = "template_2df0v4v";  // e.g. "template_xyz789"
-const EMAILJS_KEY      = "njhN8mN77cVNwY4dJ";   // e.g. "abcDEFghiJKL"
+const EMAILJS_SERVICE  = "YOUR_SERVICE_ID";   // e.g. "service_abc123"
+const EMAILJS_TEMPLATE = "YOUR_TEMPLATE_ID";  // e.g. "template_xyz789"
+const EMAILJS_KEY      = "YOUR_PUBLIC_KEY";   // e.g. "abcDEFghiJKL"
 
 async function sendWelcomeEmail({ toName, toEmail, password, role, branch, appUrl }) {
   if (EMAILJS_SERVICE === "YOUR_SERVICE_ID") return { ok: false, reason: "EmailJS not configured" };
@@ -858,13 +865,20 @@ export default function App() {
   const [users, setUsersRaw] = useState(() => lsGet(LS_USERS, USERS));
   const [branches, setBranchesRaw] = useState(() => lsGet(LS_BRANCHES, BRANCHES));
 
-  const setStats = v => { const next = typeof v === "function" ? v(stats) : v; lsSet(LS_STATS, next); setStatsRaw(next); };
-  const setUsers = v => { const next = typeof v === "function" ? v(users) : v; lsSet(LS_USERS, next); setUsersRaw(next); };
-  const setBranches = v => { const next = typeof v === "function" ? v(branches) : v; lsSet(LS_BRANCHES, next); setBranchesRaw(next); };
+  const setStats = v => {
+    setStatsRaw(prev => { const next = typeof v === "function" ? v(prev) : v; lsSet(LS_STATS, next); return next; });
+  };
+  const setUsers = v => {
+    setUsersRaw(prev => { const next = typeof v === "function" ? v(prev) : v; lsSet(LS_USERS, next); return next; });
+  };
+  const setBranches = v => {
+    setBranchesRaw(prev => { const next = typeof v === "function" ? v(prev) : v; lsSet(LS_BRANCHES, next); return next; });
+  };
 
-  // Login checks live users list (includes newly added users)
+  // Login reads directly from localStorage so it always sees latest users
   const handleLogin = (email, password) => {
-    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    const latestUsers = lsGet(LS_USERS, USERS);
+    const found = latestUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
     if (found) { setUser(found); setPage("dashboard"); return true; }
     return false;
   };
