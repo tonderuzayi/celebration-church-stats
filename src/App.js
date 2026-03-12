@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 // ── LOGO (base64) ─────────────────────────────────────────────────────────────
@@ -152,9 +152,8 @@ function LoginScreen({ onLogin }) {
   const [err, setErr] = useState("");
 
   const handle = () => {
-    const u = USERS.find(x => x.email === email && x.password === password);
-    if (u) onLogin(u);
-    else setErr("Invalid email or password.");
+    const ok = onLogin(email, password);
+    if (!ok) setErr("Invalid email or password.");
   };
 
   return (
@@ -610,21 +609,39 @@ function ConsolidatedPage({ stats }) {
 // ── ADMIN PORTAL ──────────────────────────────────────────────────────────────
 function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) {
   const [tab, setTab] = useState("users");
+  const [emailStatus, setEmailStatus] = useState(null); // null | "sending" | "sent" | "error" | "unconfigured"
 
   // User form
-  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: BRANCHES[0], password: "" });
+  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: branches[0] || "", password: "" });
   const [editUId, setEditUId] = useState(null);
   const upd = (k, v) => setUForm(f => ({ ...f, [k]: v }));
 
-  const saveUser = () => {
-    if (!uForm.name || !uForm.email) return;
+  const saveUser = async () => {
+    if (!uForm.name || !uForm.email || !uForm.password) return;
+    const isNew = !editUId;
     if (editUId) {
       setUsers(us => us.map(u => u.id === editUId ? { ...u, ...uForm } : u));
       setEditUId(null);
     } else {
       setUsers(us => [...us, { ...uForm, id: Date.now() }]);
     }
-    setUForm({ name: "", email: "", role: "capturer", branch: BRANCHES[0], password: "" });
+    // Send welcome email to new users
+    if (isNew) {
+      setEmailStatus("sending");
+      const result = await sendWelcomeEmail({
+        toName: uForm.name,
+        toEmail: uForm.email,
+        password: uForm.password,
+        role: uForm.role,
+        branch: uForm.branch,
+        appUrl: window.location.origin,
+      });
+      if (result.ok) setEmailStatus("sent");
+      else if (result.reason === "EmailJS not configured") setEmailStatus("unconfigured");
+      else setEmailStatus("error");
+      setTimeout(() => setEmailStatus(null), 6000);
+    }
+    setUForm({ name: "", email: "", role: "capturer", branch: branches[0] || "", password: "" });
   };
 
   const editUser = (u) => { setUForm({ name: u.name, email: u.email, role: u.role, branch: u.branch || BRANCHES[0], password: u.password }); setEditUId(u.id); };
@@ -644,6 +661,27 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
     <div className="fade-in">
       <h2 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>Admin Portal</h2>
       <p style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>Manage users, branches, and data.</p>
+
+      {emailStatus === "sending" && (
+        <div style={{ background: "#eff6ff", border: "1px solid #3b82f6", color: "#1d4ed8", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
+          📧 Sending welcome email...
+        </div>
+      )}
+      {emailStatus === "sent" && (
+        <div style={{ background: "#f0fdf4", border: "1px solid #22c55e", color: "#15803d", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
+          ✅ Welcome email sent successfully!
+        </div>
+      )}
+      {emailStatus === "error" && (
+        <div style={{ background: "#fef2f2", border: "1px solid #ef4444", color: "#dc2626", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
+          ❌ Email failed to send. User was still created — share login details manually.
+        </div>
+      )}
+      {emailStatus === "unconfigured" && (
+        <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", color: "#92400e", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
+          ⚠️ User created. Email not sent — EmailJS not configured yet. See setup guide below.
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 20, borderBottom: `2px solid ${C.border}`, paddingBottom: 0 }}>
         {tabs.map(t => (
@@ -669,8 +707,13 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
               {uForm.role === "capturer" && <Select label="Branch" value={uForm.branch} onChange={v => upd("branch", v)} options={branches} />}
               <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                 <Btn onClick={saveUser}>{editUId ? "Update" : "Add User"}</Btn>
-                {editUId && <Btn variant="secondary" onClick={() => { setEditUId(null); setUForm({ name: "", email: "", role: "capturer", branch: BRANCHES[0], password: "" }); }}>Cancel</Btn>}
+                {editUId && <Btn variant="secondary" onClick={() => { setEditUId(null); setUForm({ name: "", email: "", role: "capturer", branch: branches[0] || "", password: "" }); }}>Cancel</Btn>}
               </div>
+              {!editUId && (
+                <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#92400e", marginTop: 4 }}>
+                  💡 <strong>Email setup:</strong> To auto-send login instructions, configure EmailJS below (free). Until then, share credentials manually.
+                </div>
+              )}
             </div>
           </Card>
           <Card>
@@ -698,6 +741,35 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
             </table>
           </Card>
         </div>
+      )}
+
+        </div>
+      )}
+
+      {tab === "users" && (
+        <Card style={{ marginTop: 16, borderLeft: `4px solid ${C.accent}` }}>
+          <SectionTitle>📧 Email Notifications Setup (Free)</SectionTitle>
+          <p style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Follow these steps once to enable automatic welcome emails when you add users:</p>
+          <ol style={{ fontSize: 13, color: "#374151", lineHeight: 2, paddingLeft: 20 }}>
+            <li>Go to <strong>emailjs.com</strong> → Sign up free</li>
+            <li>Click <strong>Email Services</strong> → Add your Gmail or Outlook</li>
+            <li>Click <strong>Email Templates</strong> → Create New Template → use these variables:<br />
+              <code style={{ background: C.bluePale, padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>
+                {"{{to_name}} {{to_email}} {{login_email}} {{login_password}} {{role}} {{branch}} {{app_url}}"}
+              </code>
+            </li>
+            <li>Go to <strong>Account</strong> → copy your <strong>Public Key</strong></li>
+            <li>In your GitHub repo open <strong>src/App.js</strong> and replace these 3 lines near the top:
+              <pre style={{ background: C.bluePale, padding: 10, borderRadius: 8, fontSize: 12, marginTop: 6, overflowX: "auto" }}>
+{`const EMAILJS_SERVICE  = "YOUR_SERVICE_ID";
+const EMAILJS_TEMPLATE = "YOUR_TEMPLATE_ID";
+const EMAILJS_KEY      = "YOUR_PUBLIC_KEY";`}
+              </pre>
+              with your actual IDs from EmailJS dashboard.
+            </li>
+            <li>Commit the change — Netlify will redeploy automatically in ~2 minutes</li>
+          </ol>
+        </Card>
       )}
 
       {tab === "branches" && (
@@ -763,17 +835,77 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
 }
 
 // ── APP ───────────────────────────────────────────────────────────────────────
+// ── LOCALSTORAGE HELPERS ──────────────────────────────────────────────────────
+const LS_USERS = "cc_users";
+const LS_STATS = "cc_stats";
+const LS_BRANCHES = "cc_branches";
+
+function lsGet(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch { return fallback; }
+}
+function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+// ── EMAILJS HELPER ────────────────────────────────────────────────────────────
+// To enable emails: sign up free at emailjs.com, create a service + template,
+// then replace the three IDs below with your own.
+const EMAILJS_SERVICE  = "YOUR_SERVICE_ID";   // e.g. "service_abc123"
+const EMAILJS_TEMPLATE = "YOUR_TEMPLATE_ID";  // e.g. "template_xyz789"
+const EMAILJS_KEY      = "YOUR_PUBLIC_KEY";   // e.g. "abcDEFghiJKL"
+
+async function sendWelcomeEmail({ toName, toEmail, password, role, branch, appUrl }) {
+  if (EMAILJS_SERVICE === "YOUR_SERVICE_ID") return { ok: false, reason: "EmailJS not configured" };
+  try {
+    const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        service_id: EMAILJS_SERVICE,
+        template_id: EMAILJS_TEMPLATE,
+        user_id: EMAILJS_KEY,
+        template_params: {
+          to_name: toName,
+          to_email: toEmail,
+          login_email: toEmail,
+          login_password: password,
+          role: role === "admin" ? "Administrator" : "Data Capturer",
+          branch: branch || "All Branches",
+          app_url: appUrl || window.location.origin,
+        },
+      }),
+    });
+    return res.ok ? { ok: true } : { ok: false, reason: "Send failed" };
+  } catch (e) {
+    return { ok: false, reason: e.message };
+  }
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState("dashboard");
-  const [stats, setStats] = useState(SEED_STATS);
-  const [users, setUsers] = useState(USERS);
-  const [branches, setBranches] = useState(BRANCHES);
+
+  // Persist stats, users, branches in localStorage
+  const [stats, setStatsRaw] = useState(() => lsGet(LS_STATS, SEED_STATS));
+  const [users, setUsersRaw] = useState(() => lsGet(LS_USERS, USERS));
+  const [branches, setBranchesRaw] = useState(() => lsGet(LS_BRANCHES, BRANCHES));
+
+  const setStats = v => { const next = typeof v === "function" ? v(stats) : v; lsSet(LS_STATS, next); setStatsRaw(next); };
+  const setUsers = v => { const next = typeof v === "function" ? v(users) : v; lsSet(LS_USERS, next); setUsersRaw(next); };
+  const setBranches = v => { const next = typeof v === "function" ? v(branches) : v; lsSet(LS_BRANCHES, next); setBranchesRaw(next); };
+
+  // Login checks live users list (includes newly added users)
+  const handleLogin = (email, password) => {
+    const found = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    if (found) { setUser(found); setPage("dashboard"); return true; }
+    return false;
+  };
 
   if (!user) return (
     <>
       <style>{css}</style>
-      <LoginScreen onLogin={u => { setUser(u); setPage("dashboard"); }} />
+      <LoginScreen onLogin={handleLogin} />
     </>
   );
 
