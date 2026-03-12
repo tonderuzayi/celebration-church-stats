@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Celebration Church Stats",
+    "slug": "celebration-church-stats",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1F3864"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#1F3864"
+      },
+      "package": "org.celebrate.stats",
+      "versionCode": 1,
+      "permissions": ["INTERNET"]
+    },
+    "web": {
+      "favicon": "./assets/logo.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "replace-with-your-expo-project-id"
+      }
+    }
+  }
+}
