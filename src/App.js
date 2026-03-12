@@ -157,23 +157,44 @@ function LoginScreen({ onLogin }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: `linear-gradient(135deg, ${C.blueDark} 0%, ${C.blue} 60%, ${C.blueLight} 100%)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ background: "#fff", borderRadius: 20, padding: "44px 48px", width: 400, boxShadow: "0 20px 60px rgba(0,0,0,.2)" }} className="fade-in">
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <img src={LOGO} alt="Celebration" style={{ height: 70, marginBottom: 8 }} />
-          <div style={{ fontSize: 13, color: C.muted, fontWeight: 600 }}>Church Statistics Portal</div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Input label="Email Address" value={email} onChange={setEmail} type="email" />
-          <Input label="Password" value={password} onChange={setPassword} type="password" />
-          {err && <div style={{ background: "#fee2e2", color: "#dc2626", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>{err}</div>}
-          <Btn onClick={handle} style={{ marginTop: 8, padding: "12px", fontSize: 14 }}>Sign In</Btn>
-        </div>
-        <div style={{ marginTop: 20, padding: "12px", background: C.bluePale, borderRadius: 8, fontSize: 12, color: C.muted }}>
-          <strong>Demo:</strong> admin@celebrate.org / admin123<br />
-          Grace: grace@celebrate.org / pass123
+    <div style={{ minHeight: "100vh", background: `linear-gradient(150deg, ${C.blueDark} 0%, ${C.blue} 55%, ${C.blueLight} 100%)`, display: "flex", alignItems: "stretch" }}>
+
+      {/* Left branding panel */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", textAlign: "center" }}>
+        <img src={LOGO} alt="Celebration Church" style={{ height: 140, marginBottom: 32, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.3))" }} className="fade-in" />
+        <h1 style={{ fontFamily: "Nunito, sans-serif", fontSize: 32, fontWeight: 900, color: "#fff", lineHeight: 1.2, marginBottom: 16, textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+          Celebration Church
+        </h1>
+        <div style={{ width: 60, height: 3, background: C.accent, borderRadius: 2, marginBottom: 20 }} />
+        <p style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", fontStyle: "italic", lineHeight: 1.7, maxWidth: 340, fontFamily: "Lato, sans-serif", letterSpacing: 0.3 }}>
+          "Building People, Building Dreams,<br />Building the Kingdom of God"
+        </p>
+        <div style={{ marginTop: 48, padding: "12px 24px", background: "rgba(255,255,255,0.1)", borderRadius: 30, border: "1px solid rgba(255,255,255,0.2)" }}>
+          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>Statistics Portal</span>
         </div>
       </div>
+
+      {/* Right login panel */}
+      <div style={{ width: 420, background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 44px", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)" }}>
+        <div className="fade-in" style={{ width: "100%" }}>
+          <div style={{ textAlign: "center", marginBottom: 36 }}>
+            <img src={LOGO} alt="Celebration" style={{ height: 60, marginBottom: 12 }} />
+            <h2 style={{ fontFamily: "Nunito, sans-serif", fontSize: 20, fontWeight: 900, color: C.blueDark, marginBottom: 4 }}>Welcome Back</h2>
+            <p style={{ fontSize: 13, color: C.muted }}>Sign in to your account</p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Input label="Email Address" value={email} onChange={setEmail} type="email" />
+            <Input label="Password" value={password} onChange={setPassword} type="password" />
+            {err && <div style={{ background: "#fee2e2", color: "#dc2626", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>{err}</div>}
+            <Btn onClick={handle} style={{ marginTop: 8, padding: "13px", fontSize: 15, borderRadius: 10, background: C.blueDark }}>Sign In →</Btn>
+          </div>
+          <div style={{ marginTop: 24, padding: "12px 14px", background: C.bluePale, borderRadius: 10, fontSize: 12, color: C.muted }}>
+            <strong>Demo:</strong> admin@celebrate.org / admin123<br />
+            Grace: grace@celebrate.org / pass123
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -192,6 +213,9 @@ function Sidebar({ page, setPage, user, onLogout }) {
     <div style={{ width: 220, background: C.blueDark, minHeight: "100vh", display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "24px 20px 16px", borderBottom: "1px solid rgba(255,255,255,.1)" }}>
         <img src={LOGO} alt="Celebration" style={{ height: 50, filter: "brightness(0) invert(1)", opacity: .9 }} />
+        <div style={{ fontSize: 10, color: C.accent, fontStyle: "italic", marginTop: 8, lineHeight: 1.5, letterSpacing: 0.2 }}>
+          Building People,<br />Building Dreams,<br />Building the Kingdom of God
+        </div>
       </div>
       <nav style={{ flex: 1, padding: "12px 0" }}>
         {links.map(l => (
@@ -609,10 +633,8 @@ function ConsolidatedPage({ stats }) {
 // ── ADMIN PORTAL ──────────────────────────────────────────────────────────────
 function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) {
   const [tab, setTab] = useState("users");
-  const [emailStatus, setEmailStatus] = useState(null); // null | "sending" | "sent" | "error" | "unconfigured"
-
-  // User form
-  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: branches[0] || "", password: "" });
+  const [emailStatus, setEmailStatus] = useState(null);
+  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: "", password: "" });
   const [editUId, setEditUId] = useState(null);
   const upd = (k, v) => setUForm(f => ({ ...f, [k]: v }));
 
@@ -625,17 +647,9 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
     } else {
       setUsers(us => [...us, { ...uForm, id: Date.now() }]);
     }
-    // Send welcome email to new users
     if (isNew) {
       setEmailStatus("sending");
-      const result = await sendWelcomeEmail({
-        toName: uForm.name,
-        toEmail: uForm.email,
-        password: uForm.password,
-        role: uForm.role,
-        branch: uForm.branch,
-        appUrl: window.location.origin,
-      });
+      const result = await sendWelcomeEmail({ toName: uForm.name, toEmail: uForm.email, password: uForm.password, role: uForm.role, branch: uForm.branch, appUrl: window.location.origin });
       if (result.ok) setEmailStatus("sent");
       else if (result.reason === "EmailJS not configured") setEmailStatus("unconfigured");
       else setEmailStatus("error");
@@ -644,132 +658,85 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
     setUForm({ name: "", email: "", role: "capturer", branch: branches[0] || "", password: "" });
   };
 
-  const editUser = (u) => { setUForm({ name: u.name, email: u.email, role: u.role, branch: u.branch || BRANCHES[0], password: u.password }); setEditUId(u.id); };
+  const editUser = (u) => { setUForm({ name: u.name, email: u.email, role: u.role, branch: u.branch || branches[0] || "", password: u.password }); setEditUId(u.id); };
   const deleteUser = (id) => setUsers(us => us.filter(u => u.id !== id));
-
-  // Branch form
   const [newBranch, setNewBranch] = useState("");
   const addBranch = () => { if (newBranch && !branches.includes(newBranch)) { setBranches(b => [...b, newBranch]); setNewBranch(""); } };
 
-  const tabs = [
-    { id: "users", label: "👥 Users" },
-    { id: "branches", label: "🏛️ Branches" },
-    { id: "stats", label: "📋 Stats Log" },
-  ];
+  const tabs = [{ id: "users", label: "👥 Users" }, { id: "branches", label: "🏛️ Branches" }, { id: "stats", label: "📋 Stats Log" }];
 
   return (
     <div className="fade-in">
       <h2 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>Admin Portal</h2>
       <p style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>Manage users, branches, and data.</p>
 
-      {emailStatus === "sending" && (
-        <div style={{ background: "#eff6ff", border: "1px solid #3b82f6", color: "#1d4ed8", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
-          📧 Sending welcome email...
-        </div>
-      )}
-      {emailStatus === "sent" && (
-        <div style={{ background: "#f0fdf4", border: "1px solid #22c55e", color: "#15803d", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
-          ✅ Welcome email sent successfully!
-        </div>
-      )}
-      {emailStatus === "error" && (
-        <div style={{ background: "#fef2f2", border: "1px solid #ef4444", color: "#dc2626", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
-          ❌ Email failed to send. User was still created — share login details manually.
-        </div>
-      )}
-      {emailStatus === "unconfigured" && (
-        <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", color: "#92400e", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
-          ⚠️ User created. Email not sent — EmailJS not configured yet. See setup guide below.
-        </div>
-      )}
+      {emailStatus === "sending" && <div style={{ background: "#eff6ff", border: "1px solid #3b82f6", color: "#1d4ed8", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>📧 Sending welcome email...</div>}
+      {emailStatus === "sent" && <div style={{ background: "#f0fdf4", border: "1px solid #22c55e", color: "#15803d", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>✅ Welcome email sent successfully!</div>}
+      {emailStatus === "error" && <div style={{ background: "#fef2f2", border: "1px solid #ef4444", color: "#dc2626", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>❌ Email failed. User was created — share login details manually.</div>}
+      {emailStatus === "unconfigured" && <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", color: "#92400e", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>⚠️ User created. Email not sent — configure EmailJS below.</div>}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 20, borderBottom: `2px solid ${C.border}`, paddingBottom: 0 }}>
         {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            border: "none", background: "transparent", padding: "8px 18px",
-            fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "Lato, sans-serif",
-            color: tab === t.id ? C.blue : C.muted,
-            borderBottom: tab === t.id ? `2px solid ${C.blue}` : "2px solid transparent",
-            marginBottom: -2
-          }}>{t.label}</button>
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ border: "none", background: "transparent", padding: "8px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "Lato, sans-serif", color: tab === t.id ? C.blue : C.muted, borderBottom: tab === t.id ? `2px solid ${C.blue}` : "2px solid transparent", marginBottom: -2 }}>{t.label}</button>
         ))}
       </div>
 
       {tab === "users" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 16 }}>
-          <Card>
-            <SectionTitle>{editUId ? "Edit User" : "Add User"}</SectionTitle>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <Input label="Full Name" value={uForm.name} onChange={v => upd("name", v)} />
-              <Input label="Email" value={uForm.email} onChange={v => upd("email", v)} type="email" />
-              <Input label="Password" value={uForm.password} onChange={v => upd("password", v)} />
-              <Select label="Role" value={uForm.role} onChange={v => upd("role", v)} options={[{ value: "capturer", label: "Data Capturer" }, { value: "admin", label: "Administrator" }]} />
-              {uForm.role === "capturer" && <Select label="Branch" value={uForm.branch} onChange={v => upd("branch", v)} options={branches} />}
-              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                <Btn onClick={saveUser}>{editUId ? "Update" : "Add User"}</Btn>
-                {editUId && <Btn variant="secondary" onClick={() => { setEditUId(null); setUForm({ name: "", email: "", role: "capturer", branch: branches[0] || "", password: "" }); }}>Cancel</Btn>}
-              </div>
-              {!editUId && (
-                <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#92400e", marginTop: 4 }}>
-                  💡 <strong>Email setup:</strong> To auto-send login instructions, configure EmailJS below (free). Until then, share credentials manually.
+        <div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 16, marginBottom: 16 }}>
+            <Card>
+              <SectionTitle>{editUId ? "Edit User" : "Add User"}</SectionTitle>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <Input label="Full Name" value={uForm.name} onChange={v => upd("name", v)} />
+                <Input label="Email" value={uForm.email} onChange={v => upd("email", v)} type="email" />
+                <Input label="Password" value={uForm.password} onChange={v => upd("password", v)} />
+                <Select label="Role" value={uForm.role} onChange={v => upd("role", v)} options={[{ value: "capturer", label: "Data Capturer" }, { value: "admin", label: "Administrator" }]} />
+                {uForm.role === "capturer" && <Select label="Branch" value={uForm.branch} onChange={v => upd("branch", v)} options={branches} />}
+                <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                  <Btn onClick={saveUser}>{editUId ? "Update" : "Add User"}</Btn>
+                  {editUId && <Btn variant="secondary" onClick={() => { setEditUId(null); setUForm({ name: "", email: "", role: "capturer", branch: branches[0] || "", password: "" }); }}>Cancel</Btn>}
                 </div>
-              )}
-            </div>
-          </Card>
-          <Card>
-            <SectionTitle>All Users ({users.length})</SectionTitle>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead><tr style={{ background: C.bluePale }}>
-                {["Name", "Email", "Role", "Branch", ""].map(h => <th key={h} style={{ padding: "7px 10px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase" }}>{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: "8px 10px", fontWeight: 600 }}>{u.name}</td>
-                    <td style={{ padding: "8px 10px", color: C.muted, fontSize: 12 }}>{u.email}</td>
-                    <td style={{ padding: "8px 10px" }}><Badge color={u.role === "admin" ? C.accent : C.blue}>{u.role}</Badge></td>
-                    <td style={{ padding: "8px 10px", fontSize: 12 }}>{u.branch || "—"}</td>
-                    <td style={{ padding: "8px 10px" }}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <Btn variant="secondary" onClick={() => editUser(u)} style={{ padding: "4px 10px", fontSize: 11 }}>Edit</Btn>
-                        <Btn variant="danger" onClick={() => deleteUser(u.id)} style={{ padding: "4px 10px", fontSize: 11 }}>Del</Btn>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                {!editUId && <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "#92400e", marginTop: 4 }}>💡 <strong>Email setup:</strong> Configure EmailJS below to auto-send login instructions.</div>}
+              </div>
+            </Card>
+            <Card>
+              <SectionTitle>All Users ({users.length})</SectionTitle>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead><tr style={{ background: C.bluePale }}>{["Name", "Email", "Role", "Branch", ""].map(h => <th key={h} style={{ padding: "7px 10px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase" }}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: "8px 10px", fontWeight: 600 }}>{u.name}</td>
+                      <td style={{ padding: "8px 10px", color: C.muted, fontSize: 12 }}>{u.email}</td>
+                      <td style={{ padding: "8px 10px" }}><Badge color={u.role === "admin" ? C.accent : C.blue}>{u.role}</Badge></td>
+                      <td style={{ padding: "8px 10px", fontSize: 12 }}>{u.branch || "—"}</td>
+                      <td style={{ padding: "8px 10px" }}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <Btn variant="secondary" onClick={() => editUser(u)} style={{ padding: "4px 10px", fontSize: 11 }}>Edit</Btn>
+                          <Btn variant="danger" onClick={() => deleteUser(u.id)} style={{ padding: "4px 10px", fontSize: 11 }}>Del</Btn>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          </div>
+          <Card style={{ borderLeft: `4px solid ${C.accent}` }}>
+            <SectionTitle>📧 Email Notifications Setup (Free)</SectionTitle>
+            <p style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Follow these steps once to enable automatic welcome emails when you add users:</p>
+            <ol style={{ fontSize: 13, color: "#374151", lineHeight: 2, paddingLeft: 20 }}>
+              <li>Go to <strong>emailjs.com</strong> → Sign up free</li>
+              <li>Click <strong>Email Services</strong> → Add your Gmail or Outlook</li>
+              <li>Click <strong>Email Templates</strong> → Create New Template → use variables: <code style={{ background: C.bluePale, padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>{"{{to_name}} {{login_email}} {{login_password}} {{role}} {{branch}} {{app_url}}"}</code></li>
+              <li>Go to <strong>Account</strong> → copy your <strong>Public Key</strong></li>
+              <li>In GitHub open <strong>src/App.js</strong>, find and replace these 3 lines:
+                <pre style={{ background: C.bluePale, padding: 10, borderRadius: 8, fontSize: 12, marginTop: 6, overflowX: "auto" }}>{`const EMAILJS_SERVICE  = "YOUR_SERVICE_ID";\nconst EMAILJS_TEMPLATE = "YOUR_TEMPLATE_ID";\nconst EMAILJS_KEY      = "YOUR_PUBLIC_KEY";`}</pre>
+              </li>
+              <li>Commit → Netlify redeploys in ~2 minutes</li>
+            </ol>
           </Card>
         </div>
-      )}
-
-        </div>
-      )}
-
-      {tab === "users" && (
-        <Card style={{ marginTop: 16, borderLeft: `4px solid ${C.accent}` }}>
-          <SectionTitle>📧 Email Notifications Setup (Free)</SectionTitle>
-          <p style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Follow these steps once to enable automatic welcome emails when you add users:</p>
-          <ol style={{ fontSize: 13, color: "#374151", lineHeight: 2, paddingLeft: 20 }}>
-            <li>Go to <strong>emailjs.com</strong> → Sign up free</li>
-            <li>Click <strong>Email Services</strong> → Add your Gmail or Outlook</li>
-            <li>Click <strong>Email Templates</strong> → Create New Template → use these variables:<br />
-              <code style={{ background: C.bluePale, padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>
-                {"{{to_name}} {{to_email}} {{login_email}} {{login_password}} {{role}} {{branch}} {{app_url}}"}
-              </code>
-            </li>
-            <li>Go to <strong>Account</strong> → copy your <strong>Public Key</strong></li>
-            <li>In your GitHub repo open <strong>src/App.js</strong> and replace these 3 lines near the top:
-              <pre style={{ background: C.bluePale, padding: 10, borderRadius: 8, fontSize: 12, marginTop: 6, overflowX: "auto" }}>
-{`const EMAILJS_SERVICE  = "YOUR_SERVICE_ID";
-const EMAILJS_TEMPLATE = "YOUR_TEMPLATE_ID";
-const EMAILJS_KEY      = "YOUR_PUBLIC_KEY";`}
-              </pre>
-              with your actual IDs from EmailJS dashboard.
-            </li>
-            <li>Commit the change — Netlify will redeploy automatically in ~2 minutes</li>
-          </ol>
-        </Card>
       )}
 
       {tab === "branches" && (
