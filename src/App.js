@@ -839,9 +839,9 @@ function lsSet(key, value) {
 // ── EMAILJS HELPER ────────────────────────────────────────────────────────────
 // To enable emails: sign up free at emailjs.com, create a service + template,
 // then replace the three IDs below with your own.
-const EMAILJS_SERVICE  = "YOUR_SERVICE_ID";   // e.g. "service_abc123"
-const EMAILJS_TEMPLATE = "YOUR_TEMPLATE_ID";  // e.g. "template_xyz789"
-const EMAILJS_KEY      = "YOUR_PUBLIC_KEY";   // e.g. "abcDEFghiJKL"
+const EMAILJS_SERVICE  = "service_61m7n0f";   // e.g. "service_abc123"
+const EMAILJS_TEMPLATE = "template_2df0v4v";  // e.g. "template_xyz789"
+const EMAILJS_KEY      = "njhN8mN77cVNwY4dJ";   // e.g. "abcDEFghiJKL"
 
 async function sendWelcomeEmail({ toName, toEmail, password, role, branch, appUrl }) {
   if (EMAILJS_SERVICE === "YOUR_SERVICE_ID") return { ok: false, reason: "EmailJS not configured" };
