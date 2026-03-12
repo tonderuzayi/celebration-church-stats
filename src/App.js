@@ -638,8 +638,14 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
   const [editUId, setEditUId] = useState(null);
   const upd = (k, v) => setUForm(f => ({ ...f, [k]: v }));
 
+  const [saveMsg, setSaveMsg] = useState("");
+
   const saveUser = async () => {
-    if (!uForm.name || !uForm.email || !uForm.password) return;
+    if (!uForm.name || !uForm.email || !uForm.password) {
+      setSaveMsg("❌ Name, email and password are all required.");
+      setTimeout(() => setSaveMsg(""), 4000);
+      return;
+    }
     const cleanUser = {
       name: uForm.name.trim(),
       email: uForm.email.trim().toLowerCase(),
@@ -651,9 +657,12 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
     if (editUId) {
       setUsers(us => us.map(u => u.id === editUId ? { ...u, ...cleanUser } : u));
       setEditUId(null);
+      setSaveMsg(`✅ User "${cleanUser.name}" updated. They can now login with: ${cleanUser.email} / ${cleanUser.password}`);
     } else {
       setUsers(us => [...us, { ...cleanUser, id: Date.now() }]);
+      setSaveMsg(`✅ User "${cleanUser.name}" created. Login: ${cleanUser.email} / ${cleanUser.password}`);
     }
+    setTimeout(() => setSaveMsg(""), 8000);
     if (isNew) {
       setEmailStatus("sending");
       const result = await sendWelcomeEmail({ toName: uForm.name, toEmail: uForm.email, password: uForm.password, role: uForm.role, branch: uForm.branch, appUrl: window.location.origin });
@@ -677,6 +686,11 @@ function AdminPage({ users, setUsers, branches, setBranches, stats, setStats }) 
       <h2 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>Admin Portal</h2>
       <p style={{ color: C.muted, fontSize: 14, marginBottom: 20 }}>Manage users, branches, and data.</p>
 
+      {saveMsg && (
+        <div style={{ background: saveMsg.startsWith("✅") ? "#f0fdf4" : "#fef2f2", border: `1px solid ${saveMsg.startsWith("✅") ? "#22c55e" : "#ef4444"}`, color: saveMsg.startsWith("✅") ? "#15803d" : "#dc2626", borderRadius: 8, padding: "12px 16px", fontSize: 13, marginBottom: 16, fontWeight: 600 }}>
+          {saveMsg}
+        </div>
+      )}
       {emailStatus === "sending" && <div style={{ background: "#eff6ff", border: "1px solid #3b82f6", color: "#1d4ed8", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>📧 Sending welcome email...</div>}
       {emailStatus === "sent" && <div style={{ background: "#f0fdf4", border: "1px solid #22c55e", color: "#15803d", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>✅ Welcome email sent successfully!</div>}
       {emailStatus === "error" && <div style={{ background: "#fef2f2", border: "1px solid #ef4444", color: "#dc2626", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>❌ Email failed. User was created — share login details manually.</div>}
@@ -869,16 +883,26 @@ export default function App() {
     setStatsRaw(prev => { const next = typeof v === "function" ? v(prev) : v; lsSet(LS_STATS, next); return next; });
   };
   const setUsers = v => {
-    setUsersRaw(prev => { const next = typeof v === "function" ? v(prev) : v; lsSet(LS_USERS, next); return next; });
+    setUsersRaw(prev => {
+      const next = typeof v === "function" ? v(prev) : v;
+      try { localStorage.setItem(LS_USERS, JSON.stringify(next)); } catch(e) { console.error("Save users failed", e); }
+      console.log("Users saved to localStorage:", next);
+      return next;
+    });
   };
   const setBranches = v => {
     setBranchesRaw(prev => { const next = typeof v === "function" ? v(prev) : v; lsSet(LS_BRANCHES, next); return next; });
   };
 
-  // Login reads directly from localStorage so it always sees latest users
+  // Login reads directly from localStorage — always up to date
   const handleLogin = (email, password) => {
-    const latestUsers = lsGet(LS_USERS, USERS);
-    const found = latestUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    let latestUsers = USERS;
+    try {
+      const stored = localStorage.getItem(LS_USERS);
+      if (stored) latestUsers = JSON.parse(stored);
+    } catch(e) {}
+    console.log("Login attempt:", email, "| Users in storage:", latestUsers.map(u => u.email));
+    const found = latestUsers.find(u => u.email.toLowerCase().trim() === email.toLowerCase().trim() && u.password.trim() === password.trim());
     if (found) { setUser(found); setPage("dashboard"); return true; }
     return false;
   };
