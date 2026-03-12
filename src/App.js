@@ -187,10 +187,7 @@ function LoginScreen({ onLogin }) {
             <Input label="Password" value={password} onChange={setPassword} type="password" />
             {err && <div style={{ background: "#fee2e2", color: "#dc2626", borderRadius: 8, padding: "8px 12px", fontSize: 13 }}>{err}</div>}
             <Btn onClick={handle} style={{ marginTop: 8, padding: "13px", fontSize: 15, borderRadius: 10, background: C.blueDark }}>Sign In →</Btn>
-          </div>
-          <div style={{ marginTop: 24, padding: "12px 14px", background: C.bluePale, borderRadius: 10, fontSize: 12, color: C.muted }}>
-            <strong>Demo:</strong> admin@celebrate.org / admin123<br />
-            Grace: grace@celebrate.org / pass123
+          
           </div>
         </div>
       </div>
