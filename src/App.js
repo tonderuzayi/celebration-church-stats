@@ -350,89 +350,81 @@ function DashboardPage({ user, stats, branches }) {
   const [selBranch, setSelBranch] = useState(user.branch || "");
   const [selDate,   setSelDate]   = useState("");
 
-  // All dates available (for the selected branch or all)
-  const scopedStats = user.role === "admin"
-    ? (selBranch ? stats.filter(s => s.branch === selBranch) : stats)
-    : stats.filter(s => s.branch === user.branch);
+  // 1. All dates across all stats (for dropdown)
+  const allDates = [...new Set(stats.map(s => s.date))].sort().reverse();
 
-  const allDates = [...new Set(scopedStats.map(s => s.date))].sort().reverse();
-  const activeDates = allDates; // all dates available for filter dropdown
+  // 2. Default to latest available date
+  const activeDate = selDate || allDates[0] || "";
 
-  // Stats filtered by date (if selected)
-  const dateFilteredStats = selDate ? scopedStats.filter(s => s.date === selDate) : scopedStats;
+  // 3. Filter stats to the active date
+  const statsForDate = stats.filter(s => s.date === activeDate);
 
-  // ── When "All Branches" + a date: aggregate all branches for that date
-  // ── When a branch is selected: show that branch's data sorted by date
-  const isAggregated = user.role === "admin" && !selBranch;
+  // 4. Further filter by branch if one is selected
+  const isAdmin      = user.role === "admin";
+  const activeBranch = isAdmin ? selBranch : user.branch;
+  const filteredStats = activeBranch
+    ? statsForDate.filter(s => s.branch === activeBranch)
+    : statsForDate; // all branches for admin with no branch selected
 
-  // For aggregated view — sum across branches for each date
-  const aggregateByDate = (statsArr) => {
-    const byDate = {};
-    statsArr.forEach(s => {
+  // 5. Sum everything in filteredStats → these are the KPI totals
+  const totals = filteredStats.reduce((acc, s) => {
+    const ac = s.alter_call || s.alterCall || {};
+    return {
+      adults:        acc.adults        + (s.attendance.adults    || 0),
+      vip:           acc.vip           + (s.attendance.vip       || 0),
+      children:      acc.children      + (s.attendance.children  || 0),
+      salvations:    acc.salvations    + (ac.salvations           || 0),
+      rededications: acc.rededications + (ac.rededications        || 0),
+      offerings:     acc.offerings     + totalOfferings(s),
+    };
+  }, { adults: 0, vip: 0, children: 0, salvations: 0, rededications: 0, offerings: 0 });
+
+  const totalAtt = totals.adults + totals.vip + totals.children;
+
+  // 6. Previous date totals for comparison arrows
+  const prevDate   = allDates[allDates.indexOf(activeDate) + 1] || "";
+  const prevStats  = prevDate
+    ? stats.filter(s => s.date === prevDate && (activeBranch ? s.branch === activeBranch : true))
+    : [];
+  const prevTotals = prevStats.reduce((acc, s) => {
+    const ac = s.alter_call || s.alterCall || {};
+    return {
+      adults:     acc.adults     + (s.attendance.adults   || 0),
+      vip:        acc.vip        + (s.attendance.vip      || 0),
+      children:   acc.children   + (s.attendance.children || 0),
+      salvations: acc.salvations + (ac.salvations          || 0),
+      offerings:  acc.offerings  + totalOfferings(s),
+    };
+  }, { adults: 0, vip: 0, children: 0, salvations: 0, offerings: 0 });
+  const prevTotalAtt = prevTotals.adults + prevTotals.vip + prevTotals.children;
+  const hasPrev = prevStats.length > 0;
+
+  // 7. Trend chart — last 10 dates, summed per date for the active branch filter
+  const trendDates = allDates.slice(0, 10).reverse();
+  const chartData  = trendDates.map(d => {
+    const ds = stats.filter(s => s.date === d && (activeBranch ? s.branch === activeBranch : true));
+    const sum = ds.reduce((a, s) => {
       const ac = s.alter_call || s.alterCall || {};
-      if (!byDate[s.date]) byDate[s.date] = { date: s.date, adults: 0, vip: 0, children: 0, salvations: 0, rededications: 0, offerings: 0 };
-      byDate[s.date].adults        += s.attendance.adults;
-      byDate[s.date].vip           += s.attendance.vip;
-      byDate[s.date].children      += s.attendance.children;
-      byDate[s.date].salvations    += ac.salvations    || 0;
-      byDate[s.date].rededications += ac.rededications || 0;
-      byDate[s.date].offerings     += totalOfferings(s);
-    });
-    return Object.values(byDate).sort((a, b) => b.date.localeCompare(a.date));
-  };
-
-  const aggregated = aggregateByDate(dateFilteredStats);
-
-  // For single-branch view
-  const sorted = [...dateFilteredStats].sort((a, b) => b.date.localeCompare(a.date));
-
-  // KPI values — use aggregated totals or single branch latest
-  const kpi = isAggregated
-    ? (aggregated[0] || null)
-    : (sorted[0] || null);
-  const kpiPrev = isAggregated
-    ? (aggregated[1] || null)
-    : (sorted[1] || null);
-
-  // Chart data — up to 12 most recent dates
-  const chartData = isAggregated
-    ? aggregated.slice(0, 12).reverse().map(a => ({
-        date: a.date.slice(5),
-        Adults: a.adults, Children: a.children, VIP: a.vip,
-        Total: a.offerings, Salvations: a.salvations,
-      }))
-    : sorted.slice(0, 12).reverse().map(s => ({
-        date: s.date.slice(5),
-        Adults: s.attendance.adults, Children: s.attendance.children, VIP: s.attendance.vip,
-        Total: totalOfferings(s), Tithe: s.offerings.tithe,
-      }));
+      return {
+        adults:   a.adults   + (s.attendance.adults   || 0),
+        children: a.children + (s.attendance.children || 0),
+        vip:      a.vip      + (s.attendance.vip      || 0),
+        total:    a.total    + totalOfferings(s),
+        tithe:    a.tithe    + (s.offerings.tithe     || 0),
+      };
+    }, { adults: 0, children: 0, vip: 0, total: 0, tithe: 0 });
+    return { date: d.slice(5), Adults: sum.adults, Children: sum.children, VIP: sum.vip, Total: sum.total, Tithe: sum.tithe };
+  });
 
   const PIE_COLORS = [C.blue, C.accent, C.blueLight];
-  const pieData = kpi ? [
-    { name: "Adults",   value: isAggregated ? kpi.adults   : kpi.attendance.adults },
-    { name: "VIP",      value: isAggregated ? kpi.vip      : kpi.attendance.vip },
-    { name: "Children", value: isAggregated ? kpi.children : kpi.attendance.children },
-  ] : [];
+  const pieData = [
+    { name: "Adults",   value: totals.adults },
+    { name: "VIP",      value: totals.vip },
+    { name: "Children", value: totals.children },
+  ];
 
-  // KPI values normalised
-  const kpiVals = kpi ? {
-    attendance: isAggregated ? kpi.adults + kpi.vip + kpi.children : totalAttendance(kpi),
-    adults:     isAggregated ? kpi.adults     : kpi.attendance.adults,
-    children:   isAggregated ? kpi.children   : kpi.attendance.children,
-    salvations: isAggregated ? kpi.salvations : (kpi.alter_call || kpi.alterCall || {}).salvations || 0,
-    offerings:  isAggregated ? kpi.offerings  : totalOfferings(kpi),
-  } : null;
-
-  const prevVals = kpiPrev ? {
-    attendance: isAggregated ? kpiPrev.adults + kpiPrev.vip + kpiPrev.children : totalAttendance(kpiPrev),
-    adults:     isAggregated ? kpiPrev.adults     : kpiPrev.attendance.adults,
-    children:   isAggregated ? kpiPrev.children   : kpiPrev.attendance.children,
-    salvations: isAggregated ? kpiPrev.salvations : (kpiPrev.alter_call || kpiPrev.alterCall || {}).salvations || 0,
-    offerings:  isAggregated ? kpiPrev.offerings  : totalOfferings(kpiPrev),
-  } : null;
-
-  if (!kpiVals) return (
-    <Card><p style={{ color: C.muted, padding: "12px 0" }}>No stats yet{user.branch ? ` for ${user.branch}` : ""}. Use "Enter Stats" to add your first service.</p></Card>
+  if (!activeDate) return (
+    <Card><p style={{ color: C.muted, padding: "12px 0" }}>No stats recorded yet. Use "Enter Stats" to add your first service.</p></Card>
   );
 
   return (
@@ -441,64 +433,69 @@ function DashboardPage({ user, stats, branches }) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 900 }}>
-            {user.role === "admin" ? (selBranch || "All Branches") : user.branch} Dashboard
+            {isAdmin ? (activeBranch || "All Branches") : user.branch} Dashboard
           </h2>
           <p style={{ color: C.muted, fontSize: 13 }}>
-            {selDate ? `Showing: ${selDate}` : `Latest: ${kpi.date || aggregated[0]?.date}`}
-            {isAggregated && !selDate && ` · ${aggregated.length} service date${aggregated.length !== 1 ? "s" : ""}`}
+            Date: <strong>{activeDate}</strong>
+            {hasPrev && <span style={{ marginLeft: 8, color: C.muted }}>· prev: {prevDate}</span>}
           </p>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {user.role === "admin" && (
-            <Select value={selBranch} onChange={v => { setSelBranch(v); setSelDate(""); }}
+          {isAdmin && (
+            <Select value={selBranch} onChange={setSelBranch}
               options={[{ value: "", label: "All Branches" }, ...branches.map(b => ({ value: b, label: b }))]} />
           )}
           <Select value={selDate} onChange={setSelDate}
-            options={[{ value: "", label: selDate ? "All Dates" : "Filter by Date" }, ...activeDates.map(d => ({ value: d, label: d }))]} />
+            options={[...allDates.map(d => ({ value: d, label: d }))]} />
         </div>
       </div>
 
       {/* KPI Strip */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-        <StatBox label="Total Attendance" value={kpiVals.attendance} prev={prevVals?.attendance} accent />
-        <StatBox label="Adults"           value={kpiVals.adults}     prev={prevVals?.adults} />
-        <StatBox label="Children"         value={kpiVals.children}   prev={prevVals?.children} />
-        <StatBox label="Salvations"       value={kpiVals.salvations} prev={prevVals?.salvations} />
-        <StatBox label="Total Offerings"  value={kpiVals.offerings}  prev={prevVals?.offerings} />
+        <StatBox label="Total Attendance" value={totalAtt}         prev={hasPrev ? prevTotalAtt         : undefined} accent />
+        <StatBox label="Adults"           value={totals.adults}    prev={hasPrev ? prevTotals.adults    : undefined} />
+        <StatBox label="VIP"              value={totals.vip}       prev={hasPrev ? prevTotals.vip       : undefined} />
+        <StatBox label="Children"         value={totals.children}  prev={hasPrev ? prevTotals.children  : undefined} />
+        <StatBox label="Salvations"       value={totals.salvations} prev={hasPrev ? prevTotals.salvations : undefined} />
+        <StatBox label="Total Offerings"  value={totals.offerings} prev={hasPrev ? prevTotals.offerings : undefined} />
       </div>
 
-      {/* Comparison table + Pie */}
+      {/* Comparison + Pie */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
         <Card>
-          <SectionTitle>vs Previous {selDate ? "Selected Period" : "Service"}</SectionTitle>
-          {prevVals ? (
+          <SectionTitle>vs Previous Service {hasPrev && `(${prevDate})`}</SectionTitle>
+          {hasPrev ? (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead><tr>{["Metric", "Current", "Previous", "Δ"].map(h => <th key={h} style={{ textAlign: "left", padding: "4px 8px", color: C.muted, fontWeight: 700, fontSize: 11 }}>{h}</th>)}</tr></thead>
+              <thead><tr>{["Metric","This Week","Last Week","Δ"].map(h =>
+                <th key={h} style={{ textAlign:"left", padding:"4px 8px", color:C.muted, fontWeight:700, fontSize:11 }}>{h}</th>
+              )}</tr></thead>
               <tbody>
                 {[
-                  ["Attendance", kpiVals.attendance, prevVals.attendance],
-                  ["Adults",     kpiVals.adults,     prevVals.adults],
-                  ["Salvations", kpiVals.salvations, prevVals.salvations],
-                  ["Offerings",  fmt$(kpiVals.offerings), fmt$(prevVals.offerings)],
-                ].map(([m, a, b]) => (
-                  <tr key={m} style={{ borderTop: `1px solid ${C.border}` }}>
-                    <td style={{ padding: "7px 8px", fontWeight: 600 }}>{m}</td>
-                    <td style={{ padding: "7px 8px", color: C.blue, fontWeight: 700 }}>{a}</td>
-                    <td style={{ padding: "7px 8px", color: C.muted }}>{b}</td>
-                    <td style={{ padding: "7px 8px" }}><Arrow val={pct(Number(String(a).replace(/[$,]/g, "")), Number(String(b).replace(/[$,]/g, "")))} /></td>
+                  ["Total Attendance", totalAtt,           prevTotalAtt],
+                  ["Adults",           totals.adults,      prevTotals.adults],
+                  ["Children",         totals.children,    prevTotals.children],
+                  ["Salvations",       totals.salvations,  prevTotals.salvations],
+                  ["Offerings",        fmt$(totals.offerings), fmt$(prevTotals.offerings)],
+                ].map(([m,a,b]) => (
+                  <tr key={m} style={{ borderTop:`1px solid ${C.border}` }}>
+                    <td style={{ padding:"7px 8px", fontWeight:600 }}>{m}</td>
+                    <td style={{ padding:"7px 8px", color:C.blue, fontWeight:700 }}>{a}</td>
+                    <td style={{ padding:"7px 8px", color:C.muted }}>{b}</td>
+                    <td style={{ padding:"7px 8px" }}><Arrow val={pct(Number(String(a).replace(/[$,]/g,"")), Number(String(b).replace(/[$,]/g,"")))} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          ) : <p style={{ color: C.muted, fontSize: 13 }}>Only one period of data recorded so far.</p>}
+          ) : <p style={{ color:C.muted, fontSize:13 }}>No previous service data to compare.</p>}
         </Card>
         <Card>
-          <SectionTitle>Attendance Breakdown</SectionTitle>
+          <SectionTitle>Attendance Breakdown — {activeDate}</SectionTitle>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={70}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={11}>
-                {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % 3]} />)}
+                label={({name,percent}) => percent > 0 ? `${name} ${(percent*100).toFixed(0)}%` : ""}
+                labelLine={false} fontSize={11}>
+                {pieData.map((_,i) => <Cell key={i} fill={PIE_COLORS[i%3]} />)}
               </Pie>
               <Tooltip />
             </PieChart>
@@ -506,19 +503,19 @@ function DashboardPage({ user, stats, branches }) {
         </Card>
       </div>
 
-      {/* Charts */}
+      {/* Trend Charts */}
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 20 }}>
         <Card>
-          <SectionTitle>Attendance Trend ({chartData.length} services)</SectionTitle>
+          <SectionTitle>Attendance Trend</SectionTitle>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: C.muted }} />
-              <YAxis tick={{ fontSize: 11, fill: C.muted }} />
-              <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="Adults"   fill={C.blue}      radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Children" fill={C.blueLight} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="VIP"      fill={C.accent}    radius={[4, 4, 0, 0]} />
+              <XAxis dataKey="date" tick={{ fontSize:11, fill:C.muted }} />
+              <YAxis tick={{ fontSize:11, fill:C.muted }} />
+              <Tooltip contentStyle={{ borderRadius:8, fontSize:12 }} />
+              <Bar dataKey="Adults"   fill={C.blue}      radius={[4,4,0,0]} />
+              <Bar dataKey="Children" fill={C.blueLight} radius={[4,4,0,0]} />
+              <Bar dataKey="VIP"      fill={C.accent}    radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -527,58 +524,56 @@ function DashboardPage({ user, stats, branches }) {
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: C.muted }} />
-              <YAxis tick={{ fontSize: 11, fill: C.muted }} />
-              <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={v => fmt$(v)} />
-              <Line type="monotone" dataKey="Total" stroke={C.blue}   strokeWidth={2.5} dot={{ r: 4 }} />
-              <Line type="monotone" dataKey="Tithe" stroke={C.accent} strokeWidth={2}   dot={{ r: 3 }} strokeDasharray="4 2" />
+              <XAxis dataKey="date" tick={{ fontSize:11, fill:C.muted }} />
+              <YAxis tick={{ fontSize:11, fill:C.muted }} />
+              <Tooltip contentStyle={{ borderRadius:8, fontSize:12 }} formatter={v=>fmt$(v)} />
+              <Line type="monotone" dataKey="Total" stroke={C.blue}   strokeWidth={2.5} dot={{r:4}} />
+              <Line type="monotone" dataKey="Tithe" stroke={C.accent} strokeWidth={2}   dot={{r:3}} strokeDasharray="4 2" />
             </LineChart>
           </ResponsiveContainer>
         </Card>
       </div>
 
-      {/* All-branches breakdown table when no branch filter */}
-      {isAggregated && (
+      {/* Branch breakdown table — only when All Branches selected */}
+      {isAdmin && !activeBranch && (
         <Card>
-          <SectionTitle>Branch Breakdown — {selDate || "All Dates (Latest per Branch)"}</SectionTitle>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <SectionTitle>Branch Breakdown — {activeDate}</SectionTitle>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
             <thead>
-              <tr style={{ background: C.bluePale }}>
-                {["Branch", "Date", "Adults", "VIP", "Children", "Total Att.", "Salvations", "Offerings"].map(h => (
-                  <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase" }}>{h}</th>
+              <tr style={{ background:C.bluePale }}>
+                {["Branch","Adults","VIP","Children","Total Att.","Salvations","Re-ded.","Offerings"].map(h => (
+                  <th key={h} style={{ padding:"8px 12px", textAlign:"left", fontSize:11, fontWeight:800, color:C.muted, textTransform:"uppercase" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {branches.map(b => {
-                const branchData = selDate
-                  ? stats.filter(s => s.branch === b && s.date === selDate)
-                  : [stats.filter(s => s.branch === b).sort((a, z) => z.date.localeCompare(a.date))[0]].filter(Boolean);
-                const s = branchData[0];
+                const s = statsForDate.find(x => x.branch === b);
                 const ac = s ? (s.alter_call || s.alterCall || {}) : {};
                 return (
-                  <tr key={b} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: "9px 12px", fontWeight: 700 }}>{b}</td>
-                    <td style={{ padding: "9px 12px", color: C.muted, fontSize: 12 }}>{s ? s.date : "—"}</td>
+                  <tr key={b} style={{ borderBottom:`1px solid ${C.border}` }}>
+                    <td style={{ padding:"9px 12px", fontWeight:700 }}>{b}</td>
                     {s ? <>
-                      <td style={{ padding: "9px 12px" }}>{s.attendance.adults}</td>
-                      <td style={{ padding: "9px 12px" }}>{s.attendance.vip}</td>
-                      <td style={{ padding: "9px 12px" }}>{s.attendance.children}</td>
-                      <td style={{ padding: "9px 12px", fontWeight: 700, color: C.blue }}>{totalAttendance(s)}</td>
-                      <td style={{ padding: "9px 12px" }}>{ac.salvations || 0}</td>
-                      <td style={{ padding: "9px 12px", fontWeight: 700, color: C.blue }}>{fmt$(totalOfferings(s))}</td>
-                    </> : <td colSpan={6} style={{ padding: "9px 12px", color: C.muted, fontStyle: "italic" }}>No data submitted</td>}
+                      <td style={{ padding:"9px 12px" }}>{s.attendance.adults}</td>
+                      <td style={{ padding:"9px 12px" }}>{s.attendance.vip}</td>
+                      <td style={{ padding:"9px 12px" }}>{s.attendance.children}</td>
+                      <td style={{ padding:"9px 12px", fontWeight:700, color:C.blue }}>{totalAttendance(s)}</td>
+                      <td style={{ padding:"9px 12px" }}>{ac.salvations||0}</td>
+                      <td style={{ padding:"9px 12px" }}>{ac.rededications||0}</td>
+                      <td style={{ padding:"9px 12px", fontWeight:700, color:C.blue }}>{fmt$(totalOfferings(s))}</td>
+                    </> : <td colSpan={7} style={{ padding:"9px 12px", color:C.muted, fontStyle:"italic" }}>No data submitted</td>}
                   </tr>
                 );
               })}
-              <tr style={{ background: C.bluePale, fontWeight: 800 }}>
-                <td style={{ padding: "9px 12px" }} colSpan={2}>TOTAL</td>
-                <td style={{ padding: "9px 12px" }}>{kpiVals.adults}</td>
-                <td style={{ padding: "9px 12px" }}>{pieData[1]?.value || 0}</td>
-                <td style={{ padding: "9px 12px" }}>{kpiVals.children}</td>
-                <td style={{ padding: "9px 12px", color: C.blue }}>{kpiVals.attendance}</td>
-                <td style={{ padding: "9px 12px" }}>{kpiVals.salvations}</td>
-                <td style={{ padding: "9px 12px", color: C.blue }}>{fmt$(kpiVals.offerings)}</td>
+              <tr style={{ background:C.bluePale, fontWeight:800 }}>
+                <td style={{ padding:"9px 12px" }}>TOTAL</td>
+                <td style={{ padding:"9px 12px" }}>{totals.adults}</td>
+                <td style={{ padding:"9px 12px" }}>{totals.vip}</td>
+                <td style={{ padding:"9px 12px" }}>{totals.children}</td>
+                <td style={{ padding:"9px 12px", color:C.blue }}>{totalAtt}</td>
+                <td style={{ padding:"9px 12px" }}>{totals.salvations}</td>
+                <td style={{ padding:"9px 12px" }}>{totals.rededications}</td>
+                <td style={{ padding:"9px 12px", color:C.blue }}>{fmt$(totals.offerings)}</td>
               </tr>
             </tbody>
           </table>
