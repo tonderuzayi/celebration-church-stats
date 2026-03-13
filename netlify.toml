@@ -2,7 +2,9 @@
   command = "npm install --legacy-peer-deps && CI= npx react-scripts build"
   publish = "build"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Content-Security-Policy = ""
+[[redirects]]
+  from = "/supabase/*"
+  to = "https://yfetdazutkxvaixbhnok.supabase.co/:splat"
+  status = 200
+  force = true
+  headers = {X-Special-Header = "yes"}
