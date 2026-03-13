@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 // ── SUPABASE CONFIG ───────────────────────────────────────────────────────────
-const SUPA_URL = "https://yfetdazutkxvaixbhnok.supabase.co";
+const SUPA_URL = "/supabase";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmZXRkYXp1dGt4dmFpeGJobm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMjEyNzAsImV4cCI6MjA4ODg5NzI3MH0.QbnIMpr8Gwur7TmU8J3Re1rdEpzufnwcBYeGC7CVn1Y";
 const H = { "Content-Type": "application/json", "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` };
 
