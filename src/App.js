@@ -37,7 +37,7 @@ const db = {
 };
 
 // ── LOGO ──────────────────────────────────────────────────────────────────────
-const LOGO = "data:image/png;base64,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";
+const LOGO = "data:image/png;base64,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";
 
 // ── EMAILJS ───────────────────────────────────────────────────────────────────
 const EMAILJS_SERVICE  = "service_61m7n0f";
@@ -47,15 +47,21 @@ const EMAILJS_KEY      = "njhN8mN77cVNwY4dJ";
 async function sendWelcomeEmail({ toName, toEmail, password, role, branch, appUrl }) {
   if (EMAILJS_SERVICE === "YOUR_SERVICE_ID") return { ok: false, reason: "not configured" };
   try {
-    const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+    // Route via /emailjs proxy to avoid CSP blocking api.emailjs.com
+    const res = await fetch("/emailjs/api/v1.0/email/send", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         service_id: EMAILJS_SERVICE, template_id: EMAILJS_TEMPLATE, user_id: EMAILJS_KEY,
         template_params: { to_name: toName, to_email: toEmail, login_email: toEmail, login_password: password, role: role === "admin" ? "Administrator" : "Data Capturer", branch: branch || "All Branches", app_url: appUrl || window.location.origin },
       }),
     });
-    return res.ok ? { ok: true } : { ok: false, reason: await res.text() };
-  } catch (e) { return { ok: false, reason: e.message }; }
+    const text = await res.text();
+    console.log("EmailJS response:", res.status, text);
+    return res.ok ? { ok: true } : { ok: false, reason: text };
+  } catch (e) {
+    console.error("EmailJS error:", e.message);
+    return { ok: false, reason: e.message };
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -139,7 +145,7 @@ const Alert = ({ msg, type = "success" }) => {
 // ── LOADING SCREEN ────────────────────────────────────────────────────────────
 const Loader = () => (
   <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.blueDark, flexDirection: "column", gap: 20 }}>
-    <img src={LOGO} alt="Celebration Church" style={{ height: 80, filter: "brightness(0) invert(1)", opacity: .9 }} />
+    <img src={LOGO} alt="Celebration Church" style={{ height: 80, filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))", background: "rgba(255,255,255,0.9)", borderRadius: 12, padding: 8 }} />
     <div style={{ color: "rgba(255,255,255,.7)", fontSize: 14 }}>Loading Celebration Church Portal…</div>
     <div style={{ width: 200, height: 3, background: "rgba(255,255,255,.1)", borderRadius: 2, overflow: "hidden" }}>
       <div style={{ height: "100%", background: C.accent, borderRadius: 2, animation: "load 1.5s ease-in-out infinite" }} />
@@ -164,7 +170,7 @@ function LoginScreen({ onLogin }) {
   return (
     <div style={{ minHeight: "100vh", background: `linear-gradient(150deg,${C.blueDark} 0%,${C.blue} 55%,${C.blueLight} 100%)`, display: "flex", alignItems: "stretch" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", textAlign: "center" }}>
-        <img src={LOGO} alt="Celebration Church" style={{ height: 140, marginBottom: 32, filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.3))" }} className="fade-in" />
+        <img src={LOGO} alt="Celebration Church" style={{ height: 140, marginBottom: 32, background: "rgba(255,255,255,0.95)", borderRadius: 20, padding: "16px 24px", filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.25))" }} className="fade-in" />
         <h1 style={{ fontFamily: "Nunito,sans-serif", fontSize: 32, fontWeight: 900, color: "#fff", lineHeight: 1.2, marginBottom: 16 }}>Celebration Church</h1>
         <div style={{ width: 60, height: 3, background: C.accent, borderRadius: 2, marginBottom: 20 }} />
         <p style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", fontStyle: "italic", lineHeight: 1.7, maxWidth: 340 }}>
@@ -208,7 +214,7 @@ function Sidebar({ page, setPage, user, onLogout }) {
   return (
     <div style={{ width: 220, background: C.blueDark, minHeight: "100vh", display: "flex", flexDirection: "column", flexShrink: 0 }}>
       <div style={{ padding: "24px 20px 16px", borderBottom: "1px solid rgba(255,255,255,.1)" }}>
-        <img src={LOGO} alt="" style={{ height: 50, filter: "brightness(0) invert(1)", opacity: .9 }} />
+        <img src={LOGO} alt="" style={{ height: 44, background: "rgba(255,255,255,0.95)", borderRadius: 10, padding: "6px 10px" }} />
         <div style={{ fontSize: 10, color: C.accent, fontStyle: "italic", marginTop: 8, lineHeight: 1.5 }}>Building People,<br />Building Dreams,<br />Building the Kingdom of God</div>
       </div>
       <nav style={{ flex: 1, padding: "12px 0" }}>
@@ -342,74 +348,138 @@ function EntryPage({ user, branches, onSaved }) {
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function DashboardPage({ user, stats, branches }) {
   const [selBranch, setSelBranch] = useState(user.branch || "");
+  const [selDate,   setSelDate]   = useState("");
 
-  const branchStats = user.role === "admin"
+  // All dates available (for the selected branch or all)
+  const scopedStats = user.role === "admin"
     ? (selBranch ? stats.filter(s => s.branch === selBranch) : stats)
     : stats.filter(s => s.branch === user.branch);
 
-  const sorted = [...branchStats].sort((a, b) => b.date.localeCompare(a.date));
-  const latest = sorted[0];
-  const prev   = sorted[1];
-  const lastYear = sorted.find(s => {
-    if (!latest) return false;
-    const d = new Date(s.date), ld = new Date(latest.date);
-    return Math.abs(d.getFullYear() - ld.getFullYear()) === 1 && Math.abs(d.getMonth() - ld.getMonth()) <= 1;
-  });
+  const allDates = [...new Set(scopedStats.map(s => s.date))].sort().reverse();
+  const activeDates = allDates; // all dates available for filter dropdown
 
-  // Map DB shape (alter_call) to chart
-  const chartData = sorted.slice(0, 12).reverse().map(s => ({
-    date: s.date.slice(5),
-    Adults: s.attendance.adults, Children: s.attendance.children, VIP: s.attendance.vip,
-    Total: totalOfferings(s), Tithe: s.offerings.tithe,
-  }));
+  // Stats filtered by date (if selected)
+  const dateFilteredStats = selDate ? scopedStats.filter(s => s.date === selDate) : scopedStats;
 
-  const pieData = latest ? [
-    { name: "Adults", value: latest.attendance.adults },
-    { name: "VIP", value: latest.attendance.vip },
-    { name: "Children", value: latest.attendance.children },
-  ] : [];
+  // ── When "All Branches" + a date: aggregate all branches for that date
+  // ── When a branch is selected: show that branch's data sorted by date
+  const isAggregated = user.role === "admin" && !selBranch;
+
+  // For aggregated view — sum across branches for each date
+  const aggregateByDate = (statsArr) => {
+    const byDate = {};
+    statsArr.forEach(s => {
+      const ac = s.alter_call || s.alterCall || {};
+      if (!byDate[s.date]) byDate[s.date] = { date: s.date, adults: 0, vip: 0, children: 0, salvations: 0, rededications: 0, offerings: 0 };
+      byDate[s.date].adults        += s.attendance.adults;
+      byDate[s.date].vip           += s.attendance.vip;
+      byDate[s.date].children      += s.attendance.children;
+      byDate[s.date].salvations    += ac.salvations    || 0;
+      byDate[s.date].rededications += ac.rededications || 0;
+      byDate[s.date].offerings     += totalOfferings(s);
+    });
+    return Object.values(byDate).sort((a, b) => b.date.localeCompare(a.date));
+  };
+
+  const aggregated = aggregateByDate(dateFilteredStats);
+
+  // For single-branch view
+  const sorted = [...dateFilteredStats].sort((a, b) => b.date.localeCompare(a.date));
+
+  // KPI values — use aggregated totals or single branch latest
+  const kpi = isAggregated
+    ? (aggregated[0] || null)
+    : (sorted[0] || null);
+  const kpiPrev = isAggregated
+    ? (aggregated[1] || null)
+    : (sorted[1] || null);
+
+  // Chart data — up to 12 most recent dates
+  const chartData = isAggregated
+    ? aggregated.slice(0, 12).reverse().map(a => ({
+        date: a.date.slice(5),
+        Adults: a.adults, Children: a.children, VIP: a.vip,
+        Total: a.offerings, Salvations: a.salvations,
+      }))
+    : sorted.slice(0, 12).reverse().map(s => ({
+        date: s.date.slice(5),
+        Adults: s.attendance.adults, Children: s.attendance.children, VIP: s.attendance.vip,
+        Total: totalOfferings(s), Tithe: s.offerings.tithe,
+      }));
+
   const PIE_COLORS = [C.blue, C.accent, C.blueLight];
+  const pieData = kpi ? [
+    { name: "Adults",   value: isAggregated ? kpi.adults   : kpi.attendance.adults },
+    { name: "VIP",      value: isAggregated ? kpi.vip      : kpi.attendance.vip },
+    { name: "Children", value: isAggregated ? kpi.children : kpi.attendance.children },
+  ] : [];
 
-  if (!latest) return (
+  // KPI values normalised
+  const kpiVals = kpi ? {
+    attendance: isAggregated ? kpi.adults + kpi.vip + kpi.children : totalAttendance(kpi),
+    adults:     isAggregated ? kpi.adults     : kpi.attendance.adults,
+    children:   isAggregated ? kpi.children   : kpi.attendance.children,
+    salvations: isAggregated ? kpi.salvations : (kpi.alter_call || kpi.alterCall || {}).salvations || 0,
+    offerings:  isAggregated ? kpi.offerings  : totalOfferings(kpi),
+  } : null;
+
+  const prevVals = kpiPrev ? {
+    attendance: isAggregated ? kpiPrev.adults + kpiPrev.vip + kpiPrev.children : totalAttendance(kpiPrev),
+    adults:     isAggregated ? kpiPrev.adults     : kpiPrev.attendance.adults,
+    children:   isAggregated ? kpiPrev.children   : kpiPrev.attendance.children,
+    salvations: isAggregated ? kpiPrev.salvations : (kpiPrev.alter_call || kpiPrev.alterCall || {}).salvations || 0,
+    offerings:  isAggregated ? kpiPrev.offerings  : totalOfferings(kpiPrev),
+  } : null;
+
+  if (!kpiVals) return (
     <Card><p style={{ color: C.muted, padding: "12px 0" }}>No stats yet{user.branch ? ` for ${user.branch}` : ""}. Use "Enter Stats" to add your first service.</p></Card>
   );
 
-  const alterCall = latest.alter_call || latest.alterCall || {};
-  const prevAlterCall = prev ? (prev.alter_call || prev.alterCall || {}) : {};
-
   return (
     <div className="fade-in">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+      {/* Header + Filters */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 900 }}>{user.role === "admin" ? (selBranch || "All Branches") : user.branch} Dashboard</h2>
-          <p style={{ color: C.muted, fontSize: 13 }}>Latest: {latest.date}</p>
+          <h2 style={{ fontSize: 22, fontWeight: 900 }}>
+            {user.role === "admin" ? (selBranch || "All Branches") : user.branch} Dashboard
+          </h2>
+          <p style={{ color: C.muted, fontSize: 13 }}>
+            {selDate ? `Showing: ${selDate}` : `Latest: ${kpi.date || aggregated[0]?.date}`}
+            {isAggregated && !selDate && ` · ${aggregated.length} service date${aggregated.length !== 1 ? "s" : ""}`}
+          </p>
         </div>
-        {user.role === "admin" && (
-          <Select value={selBranch} onChange={setSelBranch}
-            options={[{ value: "", label: "All Branches" }, ...branches.map(b => ({ value: b, label: b }))]} />
-        )}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {user.role === "admin" && (
+            <Select value={selBranch} onChange={v => { setSelBranch(v); setSelDate(""); }}
+              options={[{ value: "", label: "All Branches" }, ...branches.map(b => ({ value: b, label: b }))]} />
+          )}
+          <Select value={selDate} onChange={setSelDate}
+            options={[{ value: "", label: selDate ? "All Dates" : "Filter by Date" }, ...activeDates.map(d => ({ value: d, label: d }))]} />
+        </div>
       </div>
 
+      {/* KPI Strip */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
-        <StatBox label="Total Attendance" value={totalAttendance(latest)} prev={prev ? totalAttendance(prev) : undefined} accent />
-        <StatBox label="Adults"     value={latest.attendance.adults}    prev={prev?.attendance.adults} />
-        <StatBox label="Children"   value={latest.attendance.children}  prev={prev?.attendance.children} />
-        <StatBox label="Salvations" value={alterCall.salvations || 0}   prev={prev ? (prevAlterCall.salvations || 0) : undefined} />
-        <StatBox label="Total Offerings" value={totalOfferings(latest)} prev={prev ? totalOfferings(prev) : undefined} />
+        <StatBox label="Total Attendance" value={kpiVals.attendance} prev={prevVals?.attendance} accent />
+        <StatBox label="Adults"           value={kpiVals.adults}     prev={prevVals?.adults} />
+        <StatBox label="Children"         value={kpiVals.children}   prev={prevVals?.children} />
+        <StatBox label="Salvations"       value={kpiVals.salvations} prev={prevVals?.salvations} />
+        <StatBox label="Total Offerings"  value={kpiVals.offerings}  prev={prevVals?.offerings} />
       </div>
 
+      {/* Comparison table + Pie */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
         <Card>
-          <SectionTitle>vs Previous Service</SectionTitle>
-          {prev ? (
+          <SectionTitle>vs Previous {selDate ? "Selected Period" : "Service"}</SectionTitle>
+          {prevVals ? (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead><tr>{["Metric", "This Week", "Last Week", "Δ"].map(h => <th key={h} style={{ textAlign: "left", padding: "4px 8px", color: C.muted, fontWeight: 700, fontSize: 11 }}>{h}</th>)}</tr></thead>
+              <thead><tr>{["Metric", "Current", "Previous", "Δ"].map(h => <th key={h} style={{ textAlign: "left", padding: "4px 8px", color: C.muted, fontWeight: 700, fontSize: 11 }}>{h}</th>)}</tr></thead>
               <tbody>
                 {[
-                  ["Attendance", totalAttendance(latest), totalAttendance(prev)],
-                  ["Adults", latest.attendance.adults, prev.attendance.adults],
-                  ["Salvations", alterCall.salvations || 0, prevAlterCall.salvations || 0],
-                  ["Offerings", fmt$(totalOfferings(latest)), fmt$(totalOfferings(prev))],
+                  ["Attendance", kpiVals.attendance, prevVals.attendance],
+                  ["Adults",     kpiVals.adults,     prevVals.adults],
+                  ["Salvations", kpiVals.salvations, prevVals.salvations],
+                  ["Offerings",  fmt$(kpiVals.offerings), fmt$(prevVals.offerings)],
                 ].map(([m, a, b]) => (
                   <tr key={m} style={{ borderTop: `1px solid ${C.border}` }}>
                     <td style={{ padding: "7px 8px", fontWeight: 600 }}>{m}</td>
@@ -420,10 +490,10 @@ function DashboardPage({ user, stats, branches }) {
                 ))}
               </tbody>
             </table>
-          ) : <p style={{ color: C.muted, fontSize: 13 }}>Only one entry recorded so far.</p>}
+          ) : <p style={{ color: C.muted, fontSize: 13 }}>Only one period of data recorded so far.</p>}
         </Card>
         <Card>
-          <SectionTitle>Latest Service Breakdown</SectionTitle>
+          <SectionTitle>Attendance Breakdown</SectionTitle>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={70}
@@ -436,6 +506,7 @@ function DashboardPage({ user, stats, branches }) {
         </Card>
       </div>
 
+      {/* Charts */}
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 20 }}>
         <Card>
           <SectionTitle>Attendance Trend ({chartData.length} services)</SectionTitle>
@@ -465,6 +536,54 @@ function DashboardPage({ user, stats, branches }) {
           </ResponsiveContainer>
         </Card>
       </div>
+
+      {/* All-branches breakdown table when no branch filter */}
+      {isAggregated && (
+        <Card>
+          <SectionTitle>Branch Breakdown — {selDate || "All Dates (Latest per Branch)"}</SectionTitle>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: C.bluePale }}>
+                {["Branch", "Date", "Adults", "VIP", "Children", "Total Att.", "Salvations", "Offerings"].map(h => (
+                  <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {branches.map(b => {
+                const branchData = selDate
+                  ? stats.filter(s => s.branch === b && s.date === selDate)
+                  : [stats.filter(s => s.branch === b).sort((a, z) => z.date.localeCompare(a.date))[0]].filter(Boolean);
+                const s = branchData[0];
+                const ac = s ? (s.alter_call || s.alterCall || {}) : {};
+                return (
+                  <tr key={b} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: "9px 12px", fontWeight: 700 }}>{b}</td>
+                    <td style={{ padding: "9px 12px", color: C.muted, fontSize: 12 }}>{s ? s.date : "—"}</td>
+                    {s ? <>
+                      <td style={{ padding: "9px 12px" }}>{s.attendance.adults}</td>
+                      <td style={{ padding: "9px 12px" }}>{s.attendance.vip}</td>
+                      <td style={{ padding: "9px 12px" }}>{s.attendance.children}</td>
+                      <td style={{ padding: "9px 12px", fontWeight: 700, color: C.blue }}>{totalAttendance(s)}</td>
+                      <td style={{ padding: "9px 12px" }}>{ac.salvations || 0}</td>
+                      <td style={{ padding: "9px 12px", fontWeight: 700, color: C.blue }}>{fmt$(totalOfferings(s))}</td>
+                    </> : <td colSpan={6} style={{ padding: "9px 12px", color: C.muted, fontStyle: "italic" }}>No data submitted</td>}
+                  </tr>
+                );
+              })}
+              <tr style={{ background: C.bluePale, fontWeight: 800 }}>
+                <td style={{ padding: "9px 12px" }} colSpan={2}>TOTAL</td>
+                <td style={{ padding: "9px 12px" }}>{kpiVals.adults}</td>
+                <td style={{ padding: "9px 12px" }}>{pieData[1]?.value || 0}</td>
+                <td style={{ padding: "9px 12px" }}>{kpiVals.children}</td>
+                <td style={{ padding: "9px 12px", color: C.blue }}>{kpiVals.attendance}</td>
+                <td style={{ padding: "9px 12px" }}>{kpiVals.salvations}</td>
+                <td style={{ padding: "9px 12px", color: C.blue }}>{fmt$(kpiVals.offerings)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </Card>
+      )}
     </div>
   );
 }
