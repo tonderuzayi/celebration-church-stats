@@ -7,4 +7,9 @@
   to = "https://yfetdazutkxvaixbhnok.supabase.co/:splat"
   status = 200
   force = true
-  headers = {X-Special-Header = "yes"}
+
+[[redirects]]
+  from = "/emailjs/*"
+  to = "https://api.emailjs.com/:splat"
+  status = 200
+  force = true
