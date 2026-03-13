@@ -92,6 +92,15 @@ const css = `
   ::-webkit-scrollbar-thumb{background:${C.blueLight};border-radius:3px}
   .fade-in{animation:fadeIn .3s ease}
   @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media(max-width:768px){
+    .app-shell{flex-direction:column!important}
+    .sidebar{width:100%!important;min-height:auto!important;flex-direction:column!important}
+    .sidebar-logo{padding:12px 16px!important}
+    .sidebar-nav{display:flex!important;flex-direction:row!important;overflow-x:auto;padding:4px 0!important;flex-wrap:nowrap}
+    .sidebar-nav button{padding:10px 12px!important;font-size:12px!important;border-left:none!important;border-bottom:3px solid transparent;white-space:nowrap;flex-shrink:0}
+    .sidebar-footer{display:none!important}
+    .main-content{padding:16px!important;max-height:none!important;overflow-y:visible!important}
+  }
 `;
 
 // ── UI COMPONENTS ─────────────────────────────────────────────────────────────
@@ -160,6 +169,30 @@ function LoginScreen({ onLogin }) {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetMsg, setResetMsg] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const handleReset = async () => {
+    if (!resetEmail.trim()) { setResetMsg("Please enter your email address."); return; }
+    setResetLoading(true);
+    try {
+      const data = await db.get("cc_users", `email=eq.${encodeURIComponent(resetEmail.trim().toLowerCase())}&limit=1`);
+      if (!data.length) { setResetMsg("No account found with that email."); setResetLoading(false); return; }
+      const u = data[0];
+      const res = await fetch("/emailjs/api/v1.0/email/send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_id: EMAILJS_SERVICE, template_id: EMAILJS_TEMPLATE, user_id: EMAILJS_KEY,
+          template_params: { to_name: u.name, to_email: u.email, login_email: u.email, login_password: u.password, role: u.role === "admin" ? "Administrator" : "Data Capturer", branch: u.branch || "All Branches", app_url: window.location.origin, subject: "Your Celebration Church Portal Password" },
+        }),
+      });
+      if (res.ok) { setResetMsg("✅ Password sent to your email!"); }
+      else { setResetMsg("❌ Could not send email. Please contact your admin."); }
+    } catch(e) { setResetMsg("❌ " + e.message); }
+    setResetLoading(false);
+  };
 
   const handle = async () => {
     setLoading(true); setErr("");
@@ -194,9 +227,28 @@ function LoginScreen({ onLogin }) {
             <Btn onClick={handle} disabled={loading} style={{ marginTop: 8, padding: "13px", fontSize: 15, borderRadius: 10, background: C.blueDark }}>
               {loading ? "Signing in…" : "Sign In →"}
             </Btn>
+            <div style={{ textAlign: "center", marginTop: 8 }}>
+              <button onClick={() => setShowReset(true)} style={{ background: "none", border: "none", color: C.blue, fontSize: 13, cursor: "pointer", textDecoration: "underline", fontFamily: "Lato,sans-serif" }}>
+                Forgot password? Request reset
+              </button>
+            </div>
           </div>
         </div>
       </div>
+      {showReset && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 36, width: 380, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <h3 style={{ fontFamily: "Nunito,sans-serif", fontSize: 18, fontWeight: 900, color: C.blueDark, marginBottom: 6 }}>Reset Password</h3>
+            <p style={{ color: C.muted, fontSize: 13, marginBottom: 20 }}>Enter your email and we'll send your password.</p>
+            <Input label="Your Email Address" value={resetEmail} onChange={setResetEmail} type="email" />
+            {resetMsg && <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 8, background: resetMsg.startsWith("✅") ? "#f0fdf4" : "#fef2f2", color: resetMsg.startsWith("✅") ? "#15803d" : "#dc2626", fontSize: 13, fontWeight: 600 }}>{resetMsg}</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <Btn onClick={handleReset} disabled={resetLoading} style={{ flex: 1 }}>{resetLoading ? "Sending…" : "Send Password"}</Btn>
+              <Btn variant="secondary" onClick={() => { setShowReset(false); setResetMsg(""); setResetEmail(""); }} style={{ flex: 1 }}>Cancel</Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -208,23 +260,25 @@ function Sidebar({ page, setPage, user, onLogout }) {
     { id: "entry", icon: "✏️", label: "Enter Stats" },
     ...(user.role === "admin" ? [
       { id: "consolidated", icon: "🌍", label: "All Branches" },
+      { id: "reports", icon: "📈", label: "Reports" },
       { id: "admin", icon: "⚙️", label: "Admin Portal" },
     ] : []),
+    { id: "profile", icon: "🔑", label: "My Profile" },
   ];
   return (
-    <div style={{ width: 220, background: C.blueDark, minHeight: "100vh", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-      <div style={{ padding: "24px 20px 16px", borderBottom: "1px solid rgba(255,255,255,.1)" }}>
+    <div className="sidebar" style={{ width: 220, background: C.blueDark, minHeight: "100vh", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+      <div className="sidebar-logo" style={{ padding: "24px 20px 16px", borderBottom: "1px solid rgba(255,255,255,.1)" }}>
         <img src={LOGO} alt="" style={{ height: 44, background: "rgba(255,255,255,0.95)", borderRadius: 10, padding: "6px 10px" }} />
         <div style={{ fontSize: 10, color: C.accent, fontStyle: "italic", marginTop: 8, lineHeight: 1.5 }}>Building People,<br />Building Dreams,<br />Building the Kingdom of God</div>
       </div>
-      <nav style={{ flex: 1, padding: "12px 0" }}>
+      <nav className="sidebar-nav" style={{ flex: 1, padding: "12px 0" }}>
         {links.map(l => (
           <button key={l.id} onClick={() => setPage(l.id)} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 20px", background: page === l.id ? "rgba(255,255,255,.12)" : "transparent", border: "none", color: page === l.id ? "#fff" : "rgba(255,255,255,.65)", fontWeight: page === l.id ? 700 : 400, fontSize: 14, cursor: "pointer", borderLeft: page === l.id ? `3px solid ${C.accent}` : "3px solid transparent", fontFamily: "Lato,sans-serif" }}>
             <span>{l.icon}</span>{l.label}
           </button>
         ))}
       </nav>
-      <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,.1)" }}>
+      <div className="sidebar-footer" style={{ padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,.1)" }}>
         <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginBottom: 2 }}>{user.role === "admin" ? "Administrator" : "Data Capturer"}</div>
         <div style={{ fontSize: 13, color: "#fff", fontWeight: 700, marginBottom: 10 }}>{user.name}</div>
         {user.branch && <div style={{ fontSize: 11, color: C.accent, marginBottom: 10 }}>{user.branch}</div>}
@@ -712,6 +766,15 @@ function AdminPage({ branches, setBranches, stats, setStats, refreshAll }) {
   };
 
   const editUser   = u => { setUForm({ name: u.name, email: u.email, role: u.role, branch: u.branch || "", password: u.password }); setEditUId(u.id); };
+  const resetUserPwd = async u => {
+    const newPwd = window.prompt(`Set new password for ${u.name}:`);
+    if (!newPwd || newPwd.length < 4) return;
+    try {
+      await db.update("cc_users", { id: u.id }, { password: newPwd });
+      setUsers(us => us.map(x => x.id === u.id ? { ...x, password: newPwd } : x));
+      showMsg(`✅ Password reset for ${u.name}.`);
+    } catch(e) { showMsg("❌ " + e.message, "error"); }
+  };
   const deleteUser = async id => {
     if (!window.confirm("Delete this user?")) return;
     await db.delete("cc_users", { id });
@@ -785,8 +848,9 @@ function AdminPage({ branches, setBranches, stats, setStats, refreshAll }) {
                         <td style={{ padding: "8px 10px", fontSize: 12 }}>{u.branch || "—"}</td>
                         <td style={{ padding: "8px 10px" }}>
                           <div style={{ display: "flex", gap: 6 }}>
-                            <Btn variant="secondary" onClick={() => editUser(u)}      style={{ padding: "4px 10px", fontSize: 11 }}>Edit</Btn>
-                            <Btn variant="danger"    onClick={() => deleteUser(u.id)} style={{ padding: "4px 10px", fontSize: 11 }}>Del</Btn>
+                            <Btn variant="secondary" onClick={() => editUser(u)} style={{ padding: "4px 10px", fontSize: 11 }}>Edit</Btn>
+                            <Btn variant="secondary" onClick={() => resetUserPwd(u)} style={{ padding: "4px 10px", fontSize: 11, color: C.blue }}>🔑 Pwd</Btn>
+                            <Btn variant="danger" onClick={() => deleteUser(u.id)} style={{ padding: "4px 10px", fontSize: 11 }}>Del</Btn>
                           </div>
                         </td>
                       </tr>
@@ -859,6 +923,351 @@ function AdminPage({ branches, setBranches, stats, setStats, refreshAll }) {
   );
 }
 
+// ── PROFILE / PASSWORD RESET ─────────────────────────────────────────────────
+function ProfilePage({ user, setUser }) {
+  const [oldPwd,  setOldPwd]  = useState("");
+  const [newPwd,  setNewPwd]  = useState("");
+  const [newPwd2, setNewPwd2] = useState("");
+  const [msg, setMsg] = useState({ text: "", type: "success" });
+  const [saving, setSaving] = useState(false);
+
+  const showMsg = (text, type = "success") => { setMsg({ text, type }); setTimeout(() => setMsg({ text: "", type: "success" }), 7000); };
+
+  const changePassword = async () => {
+    if (!oldPwd || !newPwd || !newPwd2) { showMsg("All fields are required.", "error"); return; }
+    if (oldPwd !== user.password) { showMsg("Current password is incorrect.", "error"); return; }
+    if (newPwd !== newPwd2) { showMsg("New passwords do not match.", "error"); return; }
+    if (newPwd.length < 6) { showMsg("New password must be at least 6 characters.", "error"); return; }
+    setSaving(true);
+    try {
+      const [updated] = await db.update("cc_users", { id: user.id }, { password: newPwd });
+      setUser({ ...user, password: newPwd });
+      setOldPwd(""); setNewPwd(""); setNewPwd2("");
+      showMsg("✅ Password changed successfully!");
+    } catch(e) { showMsg("❌ " + e.message, "error"); }
+    setSaving(false);
+  };
+
+  return (
+    <div className="fade-in">
+      <h2 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>My Profile</h2>
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 24 }}>Manage your account details</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, maxWidth: 800 }}>
+        <Card>
+          <SectionTitle>Account Info</SectionTitle>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ background: C.bluePale, borderRadius: 10, padding: "16px 18px" }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Full Name</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.blueDark }}>{user.name}</div>
+            </div>
+            <div style={{ background: C.bluePale, borderRadius: 10, padding: "16px 18px" }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Email</div>
+              <div style={{ fontSize: 15, color: C.blueDark }}>{user.email}</div>
+            </div>
+            <div style={{ background: C.bluePale, borderRadius: 10, padding: "16px 18px" }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Role</div>
+              <div><Badge color={user.role === "admin" ? C.accent : C.blue}>{user.role === "admin" ? "Administrator" : "Data Capturer"}</Badge></div>
+            </div>
+            {user.branch && (
+              <div style={{ background: C.bluePale, borderRadius: 10, padding: "16px 18px" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Branch</div>
+                <div style={{ fontSize: 15, color: C.blueDark }}>{user.branch}</div>
+              </div>
+            )}
+          </div>
+        </Card>
+        <Card>
+          <SectionTitle>Change Password</SectionTitle>
+          <Alert msg={msg.text} type={msg.type} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Input label="Current Password" value={oldPwd} onChange={setOldPwd} type="password" />
+            <Input label="New Password" value={newPwd} onChange={setNewPwd} type="password" />
+            <Input label="Confirm New Password" value={newPwd2} onChange={setNewPwd2} type="password" />
+            <Btn onClick={changePassword} disabled={saving} style={{ marginTop: 4 }}>
+              {saving ? "Saving…" : "Update Password"}
+            </Btn>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── REPORTS PAGE ──────────────────────────────────────────────────────────────
+function ReportsPage({ stats, branches }) {
+  const [repType,  setRepType]  = useState("monthly");  // monthly | yearly
+  const [repYear,  setRepYear]  = useState(new Date().getFullYear().toString());
+  const [repBranch,setRepBranch]= useState("");          // "" = all
+  const [exporting, setExporting] = useState("");
+
+  const years = [...new Set(stats.map(s => s.date.slice(0,4)))].sort().reverse();
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  // ── Build monthly summary rows ────────────────────────────────────────────
+  const buildRows = () => {
+    const filtered = stats.filter(s => {
+      const yearMatch = s.date.startsWith(repYear);
+      const branchMatch = repBranch ? s.branch === repBranch : true;
+      return yearMatch && branchMatch;
+    });
+
+    if (repType === "monthly") {
+      return Array.from({ length: 12 }, (_, i) => {
+        const mo = String(i + 1).padStart(2, "0");
+        const rows = filtered.filter(s => s.date.slice(5, 7) === mo);
+        const ac = rows.reduce((a, s) => {
+          const alt = s.alter_call || s.alterCall || {};
+          return {
+            adults:        a.adults        + (s.attendance.adults   || 0),
+            vip:           a.vip           + (s.attendance.vip      || 0),
+            children:      a.children      + (s.attendance.children || 0),
+            salvations:    a.salvations    + (alt.salvations         || 0),
+            rededications: a.rededications + (alt.rededications      || 0),
+            offerings:     a.offerings     + totalOfferings(s),
+            services:      a.services      + 1,
+          };
+        }, { adults:0, vip:0, children:0, salvations:0, rededications:0, offerings:0, services:0 });
+        return { label: months[i] + " " + repYear, ...ac, total: ac.adults + ac.vip + ac.children };
+      });
+    } else {
+      // yearly — one row per year
+      const allYears = [...new Set(stats.map(s => s.date.slice(0,4)))].sort();
+      return allYears.map(yr => {
+        const rows = stats.filter(s => s.date.startsWith(yr) && (repBranch ? s.branch === repBranch : true));
+        const ac = rows.reduce((a, s) => {
+          const alt = s.alter_call || s.alterCall || {};
+          return {
+            adults:        a.adults        + (s.attendance.adults   || 0),
+            vip:           a.vip           + (s.attendance.vip      || 0),
+            children:      a.children      + (s.attendance.children || 0),
+            salvations:    a.salvations    + (alt.salvations         || 0),
+            rededications: a.rededications + (alt.rededications      || 0),
+            offerings:     a.offerings     + totalOfferings(s),
+            services:      a.services      + 1,
+          };
+        }, { adults:0, vip:0, children:0, salvations:0, rededications:0, offerings:0, services:0 });
+        return { label: yr, ...ac, total: ac.adults + ac.vip + ac.children };
+      });
+    }
+  };
+
+  const rows = buildRows();
+  const totalsRow = rows.reduce((a, r) => ({
+    adults: a.adults + r.adults, vip: a.vip + r.vip, children: a.children + r.children,
+    salvations: a.salvations + r.salvations, rededications: a.rededications + r.rededications,
+    offerings: a.offerings + r.offerings, services: a.services + r.services, total: a.total + r.total,
+  }), { adults:0, vip:0, children:0, salvations:0, rededications:0, offerings:0, services:0, total:0 });
+
+  const chartData = rows.filter(r => r.total > 0 || r.services > 0);
+
+  // ── Export to CSV/Excel ──────────────────────────────────────────────────
+  const exportCSV = () => {
+    setExporting("csv");
+    const header = ["Period","Services","Adults","VIP","Children","Total Attendance","Salvations","Re-dedications","Total Offerings"];
+    const csvRows = [
+      header.join(","),
+      ...rows.map(r => [r.label, r.services, r.adults, r.vip, r.children, r.total, r.salvations, r.rededications, r.offerings.toFixed(2)].join(",")),
+      ["TOTAL", totalsRow.services, totalsRow.adults, totalsRow.vip, totalsRow.children, totalsRow.total, totalsRow.salvations, totalsRow.rededications, totalsRow.offerings.toFixed(2)].join(","),
+    ];
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a"); a.href = url;
+    a.download = `CelebrationChurch_${repType}_${repBranch || "AllBranches"}_${repYear}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    setTimeout(() => setExporting(""), 2000);
+  };
+
+  // ── Export to PDF ────────────────────────────────────────────────────────
+  const exportPDF = () => {
+    setExporting("pdf");
+    const branchLabel = repBranch || "All Branches";
+    const title = `Celebration Church — ${repType === "monthly" ? "Monthly" : "Yearly"} Report`;
+    const subtitle = `${branchLabel} · ${repType === "yearly" ? "All Years" : repYear}`;
+
+    const tableRows = rows.map(r => `
+      <tr>
+        <td>${r.label}</td><td>${r.services}</td><td>${r.adults}</td><td>${r.vip}</td>
+        <td>${r.children}</td><td><strong>${r.total}</strong></td>
+        <td>${r.salvations}</td><td>${r.rededications}</td>
+        <td><strong>$${r.offerings.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></td>
+      </tr>`).join("");
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>${title}</title>
+    <style>
+      body{font-family:Arial,sans-serif;margin:40px;color:#1a1a2e;font-size:12px}
+      .header{text-align:center;margin-bottom:30px;border-bottom:3px solid #4A6FA5;padding-bottom:20px}
+      h1{color:#2d4a73;font-size:22px;margin:0 0 6px}
+      .sub{color:#666;font-size:13px}
+      .meta{margin-bottom:20px;color:#555;font-size:12px}
+      table{width:100%;border-collapse:collapse;margin-top:16px}
+      th{background:#4A6FA5;color:#fff;padding:8px 10px;text-align:left;font-size:11px}
+      td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:11px}
+      tr:nth-child(even) td{background:#f8faff}
+      .totals td{background:#2d4a73;color:#fff;font-weight:bold;padding:9px 10px}
+      .kpi{display:flex;gap:16px;margin:20px 0;flex-wrap:wrap}
+      .kpi-box{background:#f0f4ff;border-radius:8px;padding:14px 20px;flex:1;min-width:120px;border-left:4px solid #4A6FA5}
+      .kpi-label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+      .kpi-val{font-size:20px;font-weight:bold;color:#2d4a73}
+      @media print{body{margin:20px}}
+    </style></head><body>
+    <div class="header">
+      <h1>${title}</h1>
+      <div class="sub">${subtitle}</div>
+      <div class="sub">Generated: ${new Date().toLocaleDateString("en-GB",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-box"><div class="kpi-label">Total Services</div><div class="kpi-val">${totalsRow.services}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Total Attendance</div><div class="kpi-val">${totalsRow.total.toLocaleString()}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Salvations</div><div class="kpi-val">${totalsRow.salvations}</div></div>
+      <div class="kpi-box"><div class="kpi-label">Total Offerings</div><div class="kpi-val">$${totalsRow.offerings.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Period</th><th>Services</th><th>Adults</th><th>VIP</th><th>Children</th><th>Total Att.</th><th>Salvations</th><th>Re-ded.</th><th>Offerings</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+      <tfoot><tr class="totals"><td>TOTAL</td><td>${totalsRow.services}</td><td>${totalsRow.adults}</td><td>${totalsRow.vip}</td><td>${totalsRow.children}</td><td>${totalsRow.total}</td><td>${totalsRow.salvations}</td><td>${totalsRow.rededications}</td><td>$${totalsRow.offerings.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr></tfoot>
+    </table>
+    <scr"+"ipt>window.onload=()=>{window.print();}</scr"+"ipt>
+    </body></html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url  = URL.createObjectURL(blob);
+    const win  = window.open(url, "_blank");
+    setTimeout(() => { URL.revokeObjectURL(url); setExporting(""); }, 3000);
+  };
+
+  return (
+    <div className="fade-in">
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>Reports</h2>
+          <p style={{ color: C.muted, fontSize: 13 }}>Monthly & yearly summaries with export</p>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Btn onClick={exportCSV} disabled={!!exporting} variant="secondary" style={{ fontSize: 13 }}>
+            {exporting === "csv" ? "Exporting…" : "⬇ Export Excel/CSV"}
+          </Btn>
+          <Btn onClick={exportPDF} disabled={!!exporting} style={{ fontSize: 13 }}>
+            {exporting === "pdf" ? "Opening…" : "🖨 Export PDF"}
+          </Btn>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Report Type</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["monthly","yearly"].map(t => (
+                <button key={t} onClick={() => setRepType(t)} style={{ padding: "8px 18px", borderRadius: 8, border: `2px solid ${repType === t ? C.blue : C.border}`, background: repType === t ? C.blue : "#fff", color: repType === t ? "#fff" : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "Lato,sans-serif", textTransform: "capitalize" }}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          {repType === "monthly" && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Year</div>
+              <Select value={repYear} onChange={setRepYear} options={years.length ? years.map(y => ({ value: y, label: y })) : [{ value: new Date().getFullYear().toString(), label: new Date().getFullYear().toString() }]} />
+            </div>
+          )}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Branch</div>
+            <Select value={repBranch} onChange={setRepBranch} options={[{ value: "", label: "All Branches" }, ...branches.map(b => ({ value: b, label: b }))]} />
+          </div>
+        </div>
+      </Card>
+
+      {/* KPI summary strip */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+        {[
+          { label: "Total Services", value: totalsRow.services },
+          { label: "Total Attendance", value: totalsRow.total.toLocaleString() },
+          { label: "Adults", value: totalsRow.adults.toLocaleString() },
+          { label: "Children", value: totalsRow.children.toLocaleString() },
+          { label: "Salvations", value: totalsRow.salvations },
+          { label: "Total Offerings", value: fmt$(totalsRow.offerings) },
+        ].map(({ label, value }, i) => (
+          <div key={label} style={{ background: i === 0 ? C.blueDark : i === 1 ? C.blue : "#fff", border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 20px", flex: "1 1 130px", minWidth: 120, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: (i <= 1) ? "rgba(255,255,255,0.7)" : C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{label}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: (i <= 1) ? "#fff" : C.blueDark }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts */}
+      {chartData.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 20 }}>
+          <Card>
+            <SectionTitle>Attendance Trend</SectionTitle>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.muted }} />
+                <YAxis tick={{ fontSize: 11, fill: C.muted }} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="adults"   name="Adults"   fill={C.blue}      radius={[4,4,0,0]} />
+                <Bar dataKey="children" name="Children" fill={C.blueLight} radius={[4,4,0,0]} />
+                <Bar dataKey="vip"      name="VIP"      fill={C.accent}    radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+          <Card>
+            <SectionTitle>Offerings Trend</SectionTitle>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: C.muted }} />
+                <YAxis tick={{ fontSize: 11, fill: C.muted }} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={v => fmt$(v)} />
+                <Line type="monotone" dataKey="offerings" name="Offerings" stroke={C.blue} strokeWidth={2.5} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </div>
+      )}
+
+      {/* Summary Table */}
+      <Card>
+        <SectionTitle>{repType === "monthly" ? `Monthly Summary — ${repYear}` : "Year-on-Year Summary"} {repBranch ? `· ${repBranch}` : "· All Branches"}</SectionTitle>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: C.bluePale }}>
+                {["Period","Services","Adults","VIP","Children","Total Att.","Salvations","Re-ded.","Offerings"].map(h => (
+                  <th key={h} style={{ padding: "9px 12px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.label} style={{ borderBottom: `1px solid ${C.border}`, opacity: r.services === 0 ? 0.4 : 1 }}>
+                  <td style={{ padding: "9px 12px", fontWeight: 700 }}>{r.label}</td>
+                  <td style={{ padding: "9px 12px", color: C.muted }}>{r.services || "—"}</td>
+                  <td style={{ padding: "9px 12px" }}>{r.adults || "—"}</td>
+                  <td style={{ padding: "9px 12px" }}>{r.vip || "—"}</td>
+                  <td style={{ padding: "9px 12px" }}>{r.children || "—"}</td>
+                  <td style={{ padding: "9px 12px", fontWeight: 700, color: C.blue }}>{r.total || "—"}</td>
+                  <td style={{ padding: "9px 12px" }}>{r.salvations || "—"}</td>
+                  <td style={{ padding: "9px 12px" }}>{r.rededications || "—"}</td>
+                  <td style={{ padding: "9px 12px", fontWeight: 700, color: C.blue }}>{r.offerings > 0 ? fmt$(r.offerings) : "—"}</td>
+                </tr>
+              ))}
+              <tr style={{ background: C.blueDark }}>
+                {["TOTAL", totalsRow.services, totalsRow.adults, totalsRow.vip, totalsRow.children, totalsRow.total, totalsRow.salvations, totalsRow.rededications, fmt$(totalsRow.offerings)].map((v, i) => (
+                  <td key={i} style={{ padding: "10px 12px", fontWeight: 900, color: "#fff", fontSize: 13 }}>{v}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 // ── APP ROOT ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser]       = useState(null);
@@ -901,12 +1310,14 @@ export default function App() {
   return (
     <>
       <style>{css}</style>
-      <div style={{ display: "flex", minHeight: "100vh" }}>
+      <div className="app-shell" style={{ display: "flex", minHeight: "100vh" }}>
         <Sidebar page={page} setPage={setPage} user={user} onLogout={() => { setUser(null); setStats([]); setBranches([]); }} />
-        <main style={{ flex: 1, padding: "32px 36px", overflowY: "auto", maxHeight: "100vh" }}>
+        <main className="main-content" style={{ flex: 1, padding: "32px 36px", overflowY: "auto", maxHeight: "100vh" }}>
           {page === "dashboard"    && <DashboardPage    user={user} stats={stats} branches={branches} />}
           {page === "entry"        && <EntryPage        user={user} branches={branches} onSaved={loadData} />}
           {page === "consolidated" && user.role === "admin" && <ConsolidatedPage stats={stats} branches={branches} />}
+          {page === "reports"      && user.role === "admin" && <ReportsPage stats={stats} branches={branches} />}
+          {page === "profile"      && <ProfilePage user={user} setUser={setUser} />}
           {page === "admin"        && user.role === "admin" && <AdminPage branches={branches} setBranches={setBranches} stats={stats} setStats={setStats} refreshAll={loadData} />}
         </main>
       </div>
