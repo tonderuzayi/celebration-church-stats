@@ -154,7 +154,7 @@ const Alert = ({ msg, type = "success" }) => {
 // ── LOADING SCREEN ────────────────────────────────────────────────────────────
 const Loader = () => (
   <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.blueDark, flexDirection: "column", gap: 20 }}>
-    <img src={LOGO} alt="Celebration Church" style={{ height: 80, filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))", background: "rgba(255,255,255,0.9)", borderRadius: 12, padding: 8 }} />
+    <img src={LOGO} alt="Celebration Churches International" style={{ height: 80, filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))", background: "rgba(255,255,255,0.9)", borderRadius: 12, padding: 8 }} />
     <div style={{ color: "rgba(255,255,255,.7)", fontSize: 14 }}>Loading Celebration Church Portal…</div>
     <div style={{ width: 200, height: 3, background: "rgba(255,255,255,.1)", borderRadius: 2, overflow: "hidden" }}>
       <div style={{ height: "100%", background: C.accent, borderRadius: 2, animation: "load 1.5s ease-in-out infinite" }} />
