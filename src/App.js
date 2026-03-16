@@ -848,8 +848,8 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
 function ConsolidatedPage({ user, stats, branches, cells, districts }) {
   const [filterDate, setFilterDate] = useState("");
   const dates    = [...new Set(stats.map(s => s.date))].sort().reverse();
-  const selDate  = filterDate || dates[0];
-  const filtered = stats.filter(s => s.date === selDate);
+  const selDate  = filterDate || ""; // empty = all dates
+  const filtered = selDate ? stats.filter(s => s.date === selDate) : stats;
 
   const totals = filtered.reduce((acc, s) => {
     const ac = s.alter_call || s.alterCall || {};
@@ -874,7 +874,7 @@ function ConsolidatedPage({ user, stats, branches, cells, districts }) {
   return (
     <div className="fade-in">
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap:"wrap", gap:12 }}>
-        <div><h2 style={{ fontSize: 22, fontWeight: 900 }}>Consolidated Dashboard</h2><p style={{ color: C.muted, fontSize: 13 }}>All branches · {selDate}</p></div>
+        <div><h2 style={{ fontSize: 22, fontWeight: 900 }}>Consolidated Dashboard</h2><p style={{ color: C.muted, fontSize: 13 }}>{selDate ? `Date: ${selDate}` : "All dates · cumulative"}</p></div>
         <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
           {(districts||[]).length > 0 && (
             <select value={selDistrict} onChange={e => setSelDistrict(e.target.value)}
@@ -883,7 +883,7 @@ function ConsolidatedPage({ user, stats, branches, cells, districts }) {
               {(districts||[]).map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
             </select>
           )}
-          <Select value={selDate} onChange={setFilterDate} options={dates.map(d => ({ value: d, label: d }))} />
+          <Select value={filterDate} onChange={setFilterDate} options={[{ value: "", label: "All Dates (Cumulative)" }, ...dates.map(d => ({ value: d, label: d }))]} />
         </div>
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
@@ -1478,14 +1478,14 @@ function CellsDashboardPage({ user, stats, cells, districts }) {
 
   const cellStats = stats.filter(s => s.cell);
   const allDates  = [...new Set(cellStats.map(s => s.date))].sort().reverse();
-  const activeDate = selDate || allDates[0] || "";
+  const activeDate = selDate || ""; // empty = show all dates (cumulative)
 
   const viewCells = user.role === "viewer"
     ? (JSON.parse(user.view_cells || "[]"))
     : cells.map(c => c.name);
 
   const filtered = cellStats.filter(s => {
-    const dateOk     = !activeDate || s.date === activeDate;
+    const dateOk     = !activeDate || s.date === activeDate; // cumulative when no date
     const cellOk     = selCell ? s.cell === selCell : viewCells.includes(s.cell);
     const districtOk = selDistrict ? s.district === selDistrict : true;
     return dateOk && cellOk && districtOk;
