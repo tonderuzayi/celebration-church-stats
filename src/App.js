@@ -408,7 +408,7 @@ function EntryPage({ user, branches, cells, onSaved }) {
               </select>
             </div>
           ) : user.cell ? (
-            /* Cell capturer — show their cell only (cell takes priority over branch */
+            /* Cell capturer — show their cell only (cell takes priority over branch) */
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Cell</label>
               <div style={{ padding: "12px 14px", border: `2px solid ${C.blue}`, borderRadius: 8, fontSize: 14, background: C.bluePale, fontWeight: 700, color: C.blue }}>🔵 {user.cell}</div>
@@ -422,25 +422,25 @@ function EntryPage({ user, branches, cells, onSaved }) {
           )}
           {/* Cell selector — only shown for admin (capturers see their assignment above) */}
           {user.role === "admin" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Cell (optional)</label>
-            <select value={cell} onChange={e => setCell(e.target.value)}
-              style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 14, fontFamily: "Lato,sans-serif", background: "#fff" }}>
-              <option value="">— No Cell —</option>
-              {(() => {
-                const branchDist = ((branches||[]).find(b => b.name === branch) || {}).district;
-                const filtered   = branchDist ? (cells||[]).filter(cl => cl.district === branchDist) : (cells||[]);
-                const dists      = [...new Set(filtered.map(cl => cl.district || "Unassigned"))];
-                return dists.map(dist => (
-                  <optgroup key={dist} label={"🗺️ " + dist}>
-                    {filtered.filter(cl => (cl.district || "Unassigned") === dist).map(cl => (
-                      <option key={cl.name} value={cl.name}>{cl.name}</option>
-                    ))}
-                  </optgroup>
-                ));
-              })()}
-            </select>
-          </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Cell (optional)</label>
+              <select value={cell} onChange={e => setCell(e.target.value)}
+                style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 14, fontFamily: "Lato,sans-serif", background: "#fff" }}>
+                <option value="">— No Cell —</option>
+                {(() => {
+                  const branchDist = ((branches||[]).find(b => b.name === branch) || {}).district;
+                  const filtered   = branchDist ? (cells||[]).filter(cl => cl.district === branchDist) : (cells||[]);
+                  const dists      = [...new Set(filtered.map(cl => cl.district || "Unassigned"))];
+                  return dists.map(dist => (
+                    <optgroup key={dist} label={"🗺️ " + dist}>
+                      {filtered.filter(cl => (cl.district || "Unassigned") === dist).map(cl => (
+                        <option key={cl.name} value={cl.name}>{cl.name}</option>
+                      ))}
+                    </optgroup>
+                  ));
+                })()}
+              </select>
+            </div>
           )}
           {/* Date */}
           <Input label="Service Date" value={date} onChange={setDate} type="date" />
