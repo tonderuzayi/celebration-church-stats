@@ -384,11 +384,50 @@ function EntryPage({ user, branches, cells, onSaved }) {
 
       <Card style={{ marginBottom: 20 }}>
         <SectionTitle>Service Details</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {user.role === "admin"
-            ? <Select label="Branch" value={branch} onChange={setBranch} options={branches.length ? branches : [{ value: "", label: "— Add branches first —" }]} />
-            : <div><label style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: .5 }}>Branch</label><div style={{ padding: "9px 12px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, background: C.bluePale, fontWeight: 700, color: C.blue, marginTop: 4 }}>{branch}</div></div>
-          }
+        <div className="entry-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+          {/* Branch */}
+          {user.role === "admin" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Branch *</label>
+              <select value={branch} onChange={e => { setBranch(e.target.value); setCell(""); }}
+                style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 14, fontFamily: "Lato,sans-serif", background: "#fff" }}>
+                <option value="">— Select Branch —</option>
+                {[...new Set((branches||[]).map(b => b.district || "Unassigned"))].map(dist => (
+                  <optgroup key={dist} label={"🗺️ " + dist}>
+                    {(branches||[]).filter(b => (b.district || "Unassigned") === dist).map(b => (
+                      <option key={b.name} value={b.name}>{b.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Branch</label>
+              <div style={{ padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, background: C.bluePale, fontWeight: 700, color: C.blue }}>{branch}</div>
+            </div>
+          )}
+          {/* Cell */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Cell (optional)</label>
+            <select value={cell} onChange={e => setCell(e.target.value)}
+              style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 14, fontFamily: "Lato,sans-serif", background: "#fff" }}>
+              <option value="">— No Cell —</option>
+              {(() => {
+                const branchDist = (branches.find(b => b.name === branch) || {}).district;
+                const filtered   = branchDist ? cells.filter(cl => cl.district === branchDist) : cells;
+                const dists      = [...new Set(filtered.map(cl => cl.district || "Unassigned"))];
+                return dists.map(dist => (
+                  <optgroup key={dist} label={"🗺️ " + dist}>
+                    {filtered.filter(cl => (cl.district || "Unassigned") === dist).map(cl => (
+                      <option key={cl.name} value={cl.name}>{cl.name}</option>
+                    ))}
+                  </optgroup>
+                ));
+              })()}
+            </select>
+          </div>
+          {/* Date */}
           <Input label="Service Date" value={date} onChange={setDate} type="date" />
         </div>
       </Card>
@@ -552,9 +591,9 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
               <select value={selBranch} onChange={e => setSelBranch(e.target.value)}
                 style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "Lato,sans-serif", background: "#fff", cursor: "pointer" }}>
                 <option value="">All Branches</option>
-                {[...new Set(branches.map(b=>b.district||"Other"))].map(dist=>(
+                {[...new Set((branches||[]).map(b=>b.district||"Other"))].map(dist=>(
                   <optgroup key={dist} label={`🗺️ ${dist}`}>
-                    {branches.filter(b=>(b.district||"Other")===dist).map(b=>(
+                    {(branches||[]).filter(b=>(b.district||"Other")===dist).map(b=>(
                       <option key={b.name||b} value={b.name||b}>{b.name||b}</option>
                     ))}
                   </optgroup>
@@ -664,7 +703,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
               </tr>
             </thead>
             <tbody>
-              {branches.map(bObj => { const b = bObj.name||bObj;
+              {(branches||[]).map(bObj => { const b = bObj.name||bObj;
                 const s = statsForDate.find(x => x.branch === b);
                 const ac = s ? (s.alter_call || s.alterCall || {}) : {};
                 return (
@@ -712,18 +751,35 @@ function ConsolidatedPage({ user, stats, branches, cells, districts }) {
     return { adults: acc.adults + s.attendance.adults, children: acc.children + s.attendance.children, vip: acc.vip + s.attendance.vip, salvations: acc.salvations + (ac.salvations || 0), rededications: acc.rededications + (ac.rededications || 0), offerings: acc.offerings + totalOfferings(s) };
   }, { adults: 0, children: 0, vip: 0, salvations: 0, rededications: 0, offerings: 0 });
 
-  const barData = branches.map(bObj => { const b = bObj.name||bObj;
+  const barData = (branches||[]).map(bObj => { const b = bObj.name||bObj;
     const s = filtered.find(x => x.branch === b);
     return { branch: b.split(" ")[0], attendance: s ? totalAttendance(s) : 0, offerings: s ? totalOfferings(s) : 0 };
   });
+
+  const [selDistrict, setSelDistrict] = useState("");
+  const districtBranches = selDistrict ? branches.filter(b => b.district === selDistrict) : branches;
+  const districtFiltered = selDistrict ? filtered.filter(s => s.district === selDistrict) : filtered;
+  const distTotals = districtFiltered.reduce((acc, s) => {
+    const ac = s.alter_call || s.alterCall || {};
+    return { adults: acc.adults + (s.attendance.adults||0), vip: acc.vip + (s.attendance.vip||0), children: acc.children + (s.attendance.children||0), salvations: acc.salvations + (ac.salvations||0), rededications: acc.rededications + (ac.rededications||0), offerings: acc.offerings + totalOfferings(s) };
+  }, { adults:0, vip:0, children:0, salvations:0, rededications:0, offerings:0 });
 
   if (!dates.length) return <Card><p style={{ color: C.muted }}>No stats recorded yet.</p></Card>;
 
   return (
     <div className="fade-in">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <div><h2 style={{ fontSize: 22, fontWeight: 900 }}>Consolidated Dashboard</h2><p style={{ color: C.muted, fontSize: 13 }}>All branches combined</p></div>
-        <Select value={selDate} onChange={setFilterDate} options={dates.map(d => ({ value: d, label: d }))} />
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap:"wrap", gap:12 }}>
+        <div><h2 style={{ fontSize: 22, fontWeight: 900 }}>Consolidated Dashboard</h2><p style={{ color: C.muted, fontSize: 13 }}>All branches · {selDate}</p></div>
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+          {(districts||[]).length > 0 && (
+            <select value={selDistrict} onChange={e => setSelDistrict(e.target.value)}
+              style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", fontSize:13, fontFamily:"Lato,sans-serif", background:"#fff", cursor:"pointer" }}>
+              <option value="">All Districts</option>
+              {(districts||[]).map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+            </select>
+          )}
+          <Select value={selDate} onChange={setFilterDate} options={dates.map(d => ({ value: d, label: d }))} />
+        </div>
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
         <StatBox label="Total Attendance"  value={totals.adults + totals.children + totals.vip} accent />
@@ -834,7 +890,13 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
     } catch (e) { showMsg("❌ " + e.message, "error"); }
   };
 
-  const editUser   = u => { setUForm({ name: u.name, email: u.email, role: u.role, branch: u.branch || "", password: u.password }); setEditUId(u.id); };
+  const editUser = u => {
+    let vb = [], vc = [];
+    try { vb = JSON.parse(u.view_branches || "[]"); } catch {}
+    try { vc = JSON.parse(u.view_cells || "[]"); } catch {}
+    setUForm({ name: u.name, email: u.email, role: u.role, branch: u.branch||"", cell: u.cell||"", district: u.district||"", view_branches: vb, view_cells: vc, password: u.password });
+    setEditUId(u.id);
+  };
   const resetUserPwd = async u => {
     const newPwd = window.prompt(`Set new password for ${u.name}:`);
     if (!newPwd || newPwd.length < 4) return;
@@ -923,13 +985,13 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
                 <Input label="Password"  value={uForm.password} onChange={v => upd("password", v)} />
                 <Select label="Role" value={uForm.role} onChange={v => upd("role", v)} options={[{ value: "capturer", label: "Data Capturer" }, { value: "viewer", label: "Viewer (Read Only)" }, { value: "admin", label: "Administrator" }]} />
                 {uForm.role === "capturer" && <>
-                  <Select label="Branch" value={uForm.branch} onChange={v => upd("branch", v)} options={[{value:"",label:"— Select branch —"},...branches.map(b=>({value:b.name||b,label:`${b.name||b}${b.district?' ('+b.district+')':''}`}))]} />
-                  <Select label="Cell (optional)" value={uForm.cell||""} onChange={v => upd("cell", v)} options={[{value:"",label:"— No cell —"},...cells.map(cl=>({value:cl.name,label:`${cl.name}${cl.district?' ('+cl.district+')':''}`}))]} />
+                  <Select label="Branch" value={uForm.branch} onChange={v => upd("branch", v)} options={[{value:"",label:"— Select branch —"},...(branches||[]).map(b=>({value:b.name||b,label:`${b.name||b}${b.district?' ('+b.district+')':''}`}))]} />
+                  <Select label="Cell (optional)" value={uForm.cell||""} onChange={v => upd("cell", v)} options={[{value:"",label:"— No cell —"},...(cells||[]).map(cl=>({value:cl.name,label:`${cl.name}${cl.district?' ('+cl.district+')':''}`}))]} />
                 </>}
                 {uForm.role === "viewer" && <>
                   <div style={{fontSize:12,fontWeight:700,color:C.muted,marginBottom:4}}>ASSIGN BRANCHES TO VIEW</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-                    {branches.map(b=>{ const bn=b.name||b; return (
+                    {(branches||[]).map(b=>{ const bn=b.name||b; return (
                       <label key={bn} style={{display:"flex",alignItems:"center",gap:4,fontSize:13,cursor:"pointer",padding:"4px 10px",borderRadius:20,border:`1px solid ${(uForm.view_branches||[]).includes(bn)?C.blue:C.border}`,background:(uForm.view_branches||[]).includes(bn)?C.bluePale:"#fff"}}>
                         <input type="checkbox" checked={(uForm.view_branches||[]).includes(bn)} onChange={e=>{const arr=uForm.view_branches||[];upd("view_branches",e.target.checked?[...arr,bn]:arr.filter(x=>x!==bn));}} style={{accentColor:C.blue}} />{bn}
                       </label>
@@ -937,7 +999,7 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
                   </div>
                   <div style={{fontSize:12,fontWeight:700,color:C.muted,marginBottom:4}}>ASSIGN CELLS TO VIEW</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                    {cells.map(cl=>(
+                    {(cells||[]).map(cl=>(
                       <label key={cl.name} style={{display:"flex",alignItems:"center",gap:4,fontSize:13,cursor:"pointer",padding:"4px 10px",borderRadius:20,border:`1px solid ${(uForm.view_cells||[]).includes(cl.name)?C.blue:C.border}`,background:(uForm.view_cells||[]).includes(cl.name)?C.bluePale:"#fff"}}>
                         <input type="checkbox" checked={(uForm.view_cells||[]).includes(cl.name)} onChange={e=>{const arr=uForm.view_cells||[];upd("view_cells",e.target.checked?[...arr,cl.name]:arr.filter(x=>x!==cl.name));}} style={{accentColor:C.blue}} />{cl.name}
                       </label>
@@ -954,14 +1016,21 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
               <SectionTitle>All Users ({users.length})</SectionTitle>
               {loadingUsers ? <p style={{ color: C.muted, fontSize: 13 }}>Loading…</p> : (
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead><tr style={{ background: C.bluePale }}>{["Name", "Email", "Role", "Branch", ""].map(h => <th key={h} style={{ padding: "7px 10px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase" }}>{h}</th>)}</tr></thead>
+                  <thead><tr style={{ background: C.bluePale }}>{["Name","Email","Role","Assigned To","Actions"].map(h => <th key={h} style={{ padding: "7px 10px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase" }}>{h}</th>)}</tr></thead>
                   <tbody>
                     {users.map(u => (
                       <tr key={u.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                         <td style={{ padding: "8px 10px", fontWeight: 600 }}>{u.name}</td>
                         <td style={{ padding: "8px 10px", color: C.muted, fontSize: 12 }}>{u.email}</td>
-                        <td style={{ padding: "8px 10px" }}><Badge color={u.role === "admin" ? C.accent : C.blue}>{u.role}</Badge></td>
-                        <td style={{ padding: "8px 10px", fontSize: 12 }}>{u.branch || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>
+                          <Badge color={u.role==="admin"?C.accent:u.role==="viewer"?"#7c3aed":C.blue}>
+                            {u.role==="admin"?"Admin":u.role==="viewer"?"Viewer":"Capturer"}
+                          </Badge>
+                        </td>
+                        <td style={{ padding: "8px 10px", fontSize: 12, color: C.muted }}>
+                          {u.role==="viewer" ? (()=>{try{const vb=JSON.parse(u.view_branches||"[]");return vb.length?vb.join(", "):"All Branches";}catch{return "All Branches";}})()
+                           : u.role==="capturer" ? `${u.branch||"—"}${u.cell?" / "+u.cell:""}` : "All"}
+                        </td>
                         <td style={{ padding: "8px 10px" }}>
                           <div style={{ display: "flex", gap: 6 }}>
                             <Btn variant="secondary" onClick={() => editUser(u)} style={{ padding: "4px 10px", fontSize: 11 }}>Edit</Btn>
@@ -992,12 +1061,12 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
           <Card>
             <SectionTitle>Districts ({districts.length})</SectionTitle>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 360, overflowY: "auto" }}>
-              {districts.map(d => (
+              {(districts||[]).map(d => (
                 <div key={d.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.bluePale, borderRadius: 10, border: `1px solid ${C.border}` }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>🗺️ {d.name}</div>
                     <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
-                      {branches.filter(b => b.district === d.name).length} branch{branches.filter(b=>b.district===d.name).length!==1?"es":""} · {cells.filter(cl => cl.district === d.name).length} cell{cells.filter(cl=>cl.district===d.name).length!==1?"s":""}
+                      {(branches||[]).filter(b => b.district === d.name).length} branch{branches.filter(b=>b.district===d.name).length!==1?"es":""} · {(cells||[]).filter(cl => cl.district === d.name).length} cell{cells.filter(cl=>cl.district===d.name).length!==1?"s":""}
                     </div>
                   </div>
                   <Btn variant="danger" onClick={() => deleteDistrict(d.name)} style={{ padding: "4px 10px", fontSize: 11 }}>✕ Remove</Btn>
@@ -1030,7 +1099,7 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
                 <select value={newBranchDist} onChange={e => setNewBranchDist(e.target.value)}
                   style={{ border: `1px solid ${!newBranchDist && newBranch ? "#ef4444" : C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 14, fontFamily: "Lato,sans-serif", background: "#fff", cursor: "pointer" }}>
                   <option value="">— Select District —</option>
-                  {districts.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+                  {(districts||[]).map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
                 </select>
                 {!newBranchDist && newBranch && <span style={{ fontSize: 11, color: "#ef4444" }}>District is required</span>}
               </div>
@@ -1039,8 +1108,8 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
           </Card>
           <Card>
             <SectionTitle>Branches ({branches.length})</SectionTitle>
-            {districts.map(d => {
-              const dBranches = branches.filter(b => b.district === d.name);
+            {(districts||[]).map(d => {
+              const dBranches = (branches||[]).filter(b => b.district === d.name);
               if (!dBranches.length) return null;
               return (
                 <div key={d.name} style={{ marginBottom: 16 }}>
@@ -1058,10 +1127,10 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
                 </div>
               );
             })}
-            {branches.filter(b => !b.district).length > 0 && (
+            {(branches||[]).filter(b => !b.district).length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>⚠️ Unassigned</div>
-                {branches.filter(b => !b.district).map(b => (
+                {(branches||[]).filter(b => !b.district).map(b => (
                   <div key={b.name||b} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", background: "#fff7ed", borderRadius: 8, border: `1px solid #fed7aa`, marginBottom: 6 }}>
                     <div style={{ fontWeight: 700, fontSize: 13 }}>🏛️ {b.name||b}</div>
                     <Btn variant="danger" onClick={() => removeBranch(b.name||b)} style={{ padding: "3px 8px", fontSize: 10 }}>✕</Btn>
@@ -1095,7 +1164,7 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
                 <select value={newCellDist} onChange={e => setNewCellDist(e.target.value)}
                   style={{ border: `1px solid ${!newCellDist && newCell ? "#ef4444" : C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 14, fontFamily: "Lato,sans-serif", background: "#fff", cursor: "pointer" }}>
                   <option value="">— Select District —</option>
-                  {districts.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+                  {(districts||[]).map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
                 </select>
                 {!newCellDist && newCell && <span style={{ fontSize: 11, color: "#ef4444" }}>District is required</span>}
               </div>
@@ -1104,7 +1173,7 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
           </Card>
           <Card>
             <SectionTitle>Cells ({cells.length})</SectionTitle>
-            {districts.map(d => {
+            {(districts||[]).map(d => {
               const dCells = cells.filter(cl => cl.district === d.name);
               if (!dCells.length) return null;
               return (
@@ -1123,10 +1192,10 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
                 </div>
               );
             })}
-            {cells.filter(cl => !cl.district).length > 0 && (
+            {(cells||[]).filter(cl => !cl.district).length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>⚠️ Unassigned</div>
-                {cells.filter(cl => !cl.district).map(cl => (
+                {(cells||[]).filter(cl => !cl.district).map(cl => (
                   <div key={cl.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", background: "#fff7ed", borderRadius: 8, border: "1px solid #fed7aa", marginBottom: 6 }}>
                     <div style={{ fontWeight: 700, fontSize: 13 }}>🔵 {cl.name}</div>
                     <Btn variant="danger" onClick={() => deleteCell(cl.name)} style={{ padding: "3px 8px", fontSize: 10 }}>✕</Btn>
@@ -1298,13 +1367,13 @@ function CellsDashboardPage({ user, stats, cells, districts }) {
           <p style={{ color: C.muted, fontSize: 13 }}>{activeDate ? `Date: ${activeDate}` : "All dates"} · {filtered.length} record{filtered.length !== 1 ? "s" : ""}</p>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {user.role === "admin" && districts.length > 0 && (
+          {user.role === "admin" && (districts||[]).length > 0 && (
             <Select value={selDistrict} onChange={v => { setSelDistrict(v); setSelCell(""); }}
-              options={[{ value: "", label: "All Districts" }, ...districts.map(d => ({ value: d.name, label: d.name }))]} />
+              options={[{ value: "", label: "All Districts" }, ...(districts||[]).map(d => ({ value: d.name, label: d.name }))]} />
           )}
           {(user.role === "admin" || user.role === "viewer") && (
             <Select value={selCell} onChange={setSelCell}
-              options={[{ value: "", label: "All Cells" }, ...cells.filter(cl => !selDistrict || cl.district === selDistrict).map(cl => ({ value: cl.name, label: cl.name }))]} />
+              options={[{ value: "", label: "All Cells" }, ...(cells||[]).filter(cl => !selDistrict || cl.district === selDistrict).map(cl => ({ value: cl.name, label: cl.name }))]} />
           )}
           <Select value={selDate} onChange={setSelDate}
             options={[{ value: "", label: allDates[0] ? `Latest (${allDates[0]})` : "No data" }, ...allDates.map(d => ({ value: d, label: d }))]} />
@@ -1584,7 +1653,7 @@ function ReportsPage({ user, stats, branches, cells, districts }) {
           )}
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Branch</div>
-            <Select value={repBranch} onChange={setRepBranch} options={[{ value: "", label: "All Branches" }, ...branches.map(b => ({ value: b.name||b, label: b.name||b }))]}  />
+            <Select value={repBranch} onChange={setRepBranch} options={[{ value: "", label: "All Branches" }, ...(branches||[]).map(b => ({ value: b.name||b, label: b.name||b }))]}  />
           </div>
         </div>
       </Card>
