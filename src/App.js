@@ -846,11 +846,12 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
   const [emailStatus, setEmailStatus]  = useState(null);
   const [saveMsg, setSaveMsg]   = useState({ text: "", type: "success" });
   const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", view_branches: [], view_cells: [], password: "" });
-  const [newDistrict, setNewDistrict] = useState("");
-  const [newCell, setNewCell]         = useState("");
-  const [cellDistrict, setCellDistrict] = useState("");
-  const [editUId, setEditUId]   = useState(null);
-  const [newBranch, setNewBranch] = useState("");
+  const [newDistrict,   setNewDistrict]   = useState("");
+  const [newBranch,     setNewBranch]     = useState("");
+  const [newBranchDist, setNewBranchDist] = useState("");
+  const [newCell,       setNewCell]       = useState("");
+  const [newCellDist,   setNewCellDist]   = useState("");
+  const [editUId,       setEditUId]       = useState(null);
   const upd = (k, v) => setUForm(f => ({ ...f, [k]: v }));
 
   useEffect(() => {
