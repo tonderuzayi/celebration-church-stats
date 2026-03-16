@@ -514,10 +514,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   const allDates = [...new Set(stats.map(s => s.date))].sort().reverse();
 
   // 2. Default to latest available date
-  const activeDate = selDate || allDates[0] || "";
-
-  // 3. Filter stats to the active date
-  const statsForDate = stats.filter(s => s.date === activeDate);
+  const activeDate = selDate || "";
 
   // 4. Role-based scoping
   const isAdmin      = user.role === "admin";
