@@ -945,7 +945,7 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [emailStatus, setEmailStatus]  = useState(null);
   const [saveMsg, setSaveMsg]   = useState({ text: "", type: "success" });
-  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", view_branches: [], view_cells: [], password: "" });
+  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", assignType: "branch", view_branches: [], view_cells: [], password: "" });
   const [newDistrict,   setNewDistrict]   = useState("");
   const [newBranch,     setNewBranch]     = useState("");
   const [newBranchDist, setNewBranchDist] = useState("");
@@ -959,15 +959,15 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
   }, []);
 
   const showMsg = (text, type = "success") => { setSaveMsg({ text, type }); setTimeout(() => setSaveMsg({ text: "", type: "success" }), 10000); };
-  const clearForm = () => setUForm({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", view_branches: [], view_cells: [], password: "" });
+  const clearForm = () => setUForm({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", assignType: "branch", view_branches: [], view_cells: [], password: "" });
 
   const saveUser = async () => {
     if (!uForm.name || !uForm.email || !uForm.password) { showMsg("❌ Name, email and password are required.", "error"); return; }
     const cleanUser = {
       name: uForm.name.trim(), email: uForm.email.trim().toLowerCase(),
       password: uForm.password.trim(), role: uForm.role,
-      branch: (uForm.role === "capturer" && (uForm.assignType||"branch")==="branch") ? (uForm.branch||"") : null,
-      cell:   (uForm.role === "capturer" && (uForm.assignType||"branch")==="cell")   ? (uForm.cell||null)   : null,
+      branch: (uForm.role === "capturer" && uForm.assignType === "branch") ? (uForm.branch||"") : null,
+      cell:   (uForm.role === "capturer" && uForm.assignType === "cell")   ? (uForm.cell||null) : null,
       district: uForm.district || null,
       view_branches: (uForm.role === "viewer") ? JSON.stringify(uForm.view_branches || []) : null,
       view_cells:    (uForm.role === "viewer") ? JSON.stringify(uForm.view_cells || []) : null,
@@ -1092,12 +1092,12 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
                     <div style={{ display:"flex", gap:8 }}>
                       {["branch","cell"].map(t=>(
                         <button key={t} type="button" onClick={()=>{ upd("assignType",t); upd("branch",""); upd("cell",""); }}
-                          style={{ flex:1, padding:"8px", borderRadius:8, border:`2px solid ${(uForm.assignType||"branch")===t?C.blue:C.border}`, background:(uForm.assignType||"branch")===t?C.bluePale:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Lato,sans-serif", color:(uForm.assignType||"branch")===t?C.blue:C.muted, textTransform:"capitalize" }}>
+                          style={{ flex:1, padding:"8px", borderRadius:8, border:`2px solid ${uForm.assignType===t?C.blue:C.border}`, background:uForm.assignType===t?C.bluePale:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Lato,sans-serif", color:uForm.assignType===t?C.blue:C.muted, textTransform:"capitalize" }}>
                           {t==="branch"?"🏛️ Branch":"🔵 Cell"}
                         </button>
                       ))}
                     </div>
-                    {(uForm.assignType||"branch")==="branch" ? (
+                    {uForm.assignType === "branch" ? (
                       <div style={{display:"flex",flexDirection:"column",gap:4}}>
                         <label style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Branch</label>
                         <select value={uForm.branch||""} onChange={e=>{upd("branch",e.target.value);upd("cell","");}}
