@@ -809,7 +809,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
             </thead>
             <tbody>
               {(branches||[]).map(bObj => { const b = bObj.name||bObj;
-                const s = districtFiltered.find(x => x.branch === b);
+                const s = filteredStats.find(x => x.branch === b);
                 const ac = s ? (s.alter_call || s.alterCall || {}) : {};
                 return (
                   <tr key={b} style={{ borderBottom:`1px solid ${C.border}` }}>
