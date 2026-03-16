@@ -513,32 +513,37 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   // 1. All dates across all stats (for dropdown)
   const allDates = [...new Set(stats.map(s => s.date))].sort().reverse();
 
-  // 2. Default to latest available date
+  // 2. activeDate only set when user explicitly picks one
   const activeDate = selDate || "";
 
-  // 4. Role-based scoping
+  // 3. Role-based scoping
   const isAdmin      = user.role === "admin";
   const isViewer     = user.role === "viewer";
   const isCapturer   = user.role === "capturer";
-  const userIsCell   = isCapturer && !!user.cell;                   // cell takes priority
-  const userIsBranch = isCapturer && !!user.branch && !user.cell;  // branch capturer (no cell)
+  const userIsCell   = isCapturer && !!user.cell;
+  const userIsBranch = isCapturer && !!user.branch && !user.cell;
   const viewBranches = isViewer ? (() => { try { return JSON.parse(user.view_branches||"[]"); } catch { return []; } })() : [];
   const viewCells_   = isViewer ? (() => { try { return JSON.parse(user.view_cells||"[]"); } catch { return []; } })() : [];
 
-  // activeBranch/Cell: what admin/viewer has selected in the filter
   const activeBranch = (isAdmin||isViewer) ? selBranch : (userIsBranch ? user.branch : "");
-  const activeCell   = (isAdmin||isViewer) ? selCell : (userIsCell ? user.cell : "");
+  const activeCell   = (isAdmin||isViewer) ? selCell   : (userIsCell   ? user.cell   : "");
 
-  // Scope stats based on role
+  // 4. Build filtered stats — cumulative across all dates unless date selected
   const filteredStats = (() => {
+    // Start with all stats, then narrow down
+    let base = stats;
+
+    // Date filter — only apply when explicitly chosen
+    if (activeDate) base = base.filter(s => s.date === activeDate);
+
+    // Role scoping
     if (isCapturer) {
-      // capturer sees ONLY their assigned branch OR cell
-      if (userIsCell)   return statsForDate.filter(s => s.cell   === user.cell);
-      if (userIsBranch) return statsForDate.filter(s => s.branch === user.branch);
-      return statsForDate.filter(s => s.branch === user.branch); // fallback
+      if (userIsCell)   return base.filter(s => s.cell   === user.cell);
+      if (userIsBranch) return base.filter(s => s.branch === user.branch);
+      return base.filter(s => s.branch === user.branch);
     }
     if (isViewer) {
-      const base = statsForDate.filter(s =>
+      base = base.filter(s =>
         (viewBranches.length===0 || viewBranches.includes(s.branch)) &&
         (viewCells_.length===0   || !s.cell || viewCells_.includes(s.cell))
       );
@@ -546,14 +551,14 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
       if (activeBranch) return base.filter(s => s.branch === activeBranch);
       return base;
     }
-    // admin/viewer — filter by district → then branch or cell based on dashView
-    const districtBase = selDistrict ? statsForDate.filter(s => s.district === selDistrict) : statsForDate;
+    // Admin — district → branch or cell
+    if (selDistrict) base = base.filter(s => s.district === selDistrict);
     if (dashView === "cells") {
-      if (activeCell)   return districtBase.filter(s => s.cell === activeCell);
-      return districtBase.filter(s => !!s.cell);
+      if (activeCell) return base.filter(s => s.cell === activeCell);
+      return base.filter(s => !!s.cell);
     }
-    if (activeBranch) return districtBase.filter(s => s.branch === activeBranch);
-    return districtBase.filter(s => !s.cell);
+    if (activeBranch) return base.filter(s => s.branch === activeBranch);
+    return base.filter(s => !s.cell);
   })();
 
   // 5. Sum everything in filteredStats → these are the KPI totals
@@ -572,10 +577,12 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   const totalAtt = totals.adults + totals.vip + totals.children;
 
   // 6. Previous date totals for comparison arrows
-  const prevDate   = allDates[allDates.indexOf(activeDate) + 1] || "";
-  const prevStats  = prevDate
+  // prevDate handled via compDate below
+  // For comparison: previous date = most recent date BEFORE activeDate (or before latest)
+  const compDate  = activeDate ? allDates[allDates.indexOf(activeDate) + 1] : allDates[1];
+  const prevStats = compDate
     ? stats.filter(s => {
-        if (s.date !== prevDate) return false;
+        if (s.date !== compDate) return false;
         if (isCapturer) return userIsCell ? s.cell === user.cell : s.branch === user.branch;
         if (selDistrict && s.district !== selDistrict) return false;
         if (dashView === "cells") return selCell ? s.cell === selCell : !!s.cell;
@@ -594,6 +601,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   }, { adults: 0, vip: 0, children: 0, salvations: 0, offerings: 0 });
   const prevTotalAtt = prevTotals.adults + prevTotals.vip + prevTotals.children;
   const hasPrev = prevStats.length > 0;
+  const prevDate = compDate || "";
 
   // 7. Trend chart — last 10 dates, summed per date for the active branch filter
   const trendDates = allDates.slice(0, 10).reverse();
@@ -604,7 +612,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
       if (selDistrict && s.district !== selDistrict) return false;
       if (dashView === "cells") return selCell ? s.cell === selCell : !!s.cell;
       return selBranch ? s.branch === selBranch : !s.cell;
-    });
+    }); // chart always shows per-date breakdown
     const sum = ds.reduce((a, s) => {
       const ac = s.alter_call || s.alterCall || {};
       return {
@@ -625,7 +633,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
     { name: "Children", value: totals.children },
   ];
 
-  if (!activeDate) return (
+  if (!stats.length) return (
     <Card><p style={{ color: C.muted, padding: "12px 0" }}>No stats recorded yet. Use "Enter Stats" to add your first service.</p></Card>
   );
 
@@ -644,8 +652,8 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
                   : (selBranch ? `🏛️ ${selBranch}` : "All Branches")} Dashboard
           </h2>
           <p style={{ color:C.muted, fontSize:13 }}>
-            Date: <strong>{activeDate}</strong>
-            {hasPrev && <span style={{ marginLeft:8, color:C.muted }}>· prev: {prevDate}</span>}
+            {activeDate ? <>Date: <strong>{activeDate}</strong></> : <>All dates · <strong>{filteredStats.length}</strong> record{filteredStats.length!==1?"s":""}</>}
+            {hasPrev && activeDate && <span style={{ marginLeft:8, color:C.muted }}>· prev: {prevDate}</span>}
           </p>
         </div>
         {/* Filters — admin/viewer only */}
@@ -694,12 +702,12 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
             )}
             {/* Date */}
             <Select value={selDate} onChange={setSelDate}
-              options={[{ value:"", label:"Latest Date" }, ...allDates.map(d=>({ value:d, label:d }))]} />
+              options={[{ value:"", label:"All Dates (Cumulative)" }, ...allDates.map(d=>({ value:d, label:d }))]} />
           </div>
         )}
         {isCapturer && (
           <Select value={selDate} onChange={setSelDate}
-            options={[{ value:"", label:"Latest Date" }, ...allDates.map(d=>({ value:d, label:d }))]} />
+            options={[{ value:"", label:"All Dates (Cumulative)" }, ...allDates.map(d=>({ value:d, label:d }))]} />
         )}
       </div>
 
@@ -801,7 +809,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
             </thead>
             <tbody>
               {(branches||[]).map(bObj => { const b = bObj.name||bObj;
-                const s = statsForDate.find(x => x.branch === b);
+                const s = districtFiltered.find(x => x.branch === b);
                 const ac = s ? (s.alter_call || s.alterCall || {}) : {};
                 return (
                   <tr key={b} style={{ borderBottom:`1px solid ${C.border}` }}>
@@ -942,7 +950,8 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [emailStatus, setEmailStatus]  = useState(null);
   const [saveMsg, setSaveMsg]   = useState({ text: "", type: "success" });
-  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", assignType: "branch", view_branches: [], view_cells: [], password: "" });  const [newDistrict,   setNewDistrict]   = useState("");
+  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", assignType: "branch", view_branches: [], view_cells: [], password: "" });
+  const [newDistrict,   setNewDistrict]   = useState("");
   const [newBranch,     setNewBranch]     = useState("");
   const [newBranchDist, setNewBranchDist] = useState("");
   const [newCell,       setNewCell]       = useState("");
@@ -956,6 +965,7 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
 
   const showMsg = (text, type = "success") => { setSaveMsg({ text, type }); setTimeout(() => setSaveMsg({ text: "", type: "success" }), 10000); };
   const clearForm = () => setUForm({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", assignType: "branch", view_branches: [], view_cells: [], password: "" });
+
   const saveUser = async () => {
     if (!uForm.name || !uForm.email || !uForm.password) { showMsg("❌ Name, email and password are required.", "error"); return; }
     console.log("SAVING USER — assignType:", uForm.assignType, "branch:", uForm.branch, "cell:", uForm.cell);
