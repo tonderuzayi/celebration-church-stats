@@ -963,6 +963,7 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
 
   const saveUser = async () => {
     if (!uForm.name || !uForm.email || !uForm.password) { showMsg("❌ Name, email and password are required.", "error"); return; }
+    console.log("SAVING USER — assignType:", uForm.assignType, "branch:", uForm.branch, "cell:", uForm.cell);
     const cleanUser = {
       name: uForm.name.trim(), email: uForm.email.trim().toLowerCase(),
       password: uForm.password.trim(), role: uForm.role,
