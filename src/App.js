@@ -945,8 +945,7 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [emailStatus, setEmailStatus]  = useState(null);
   const [saveMsg, setSaveMsg]   = useState({ text: "", type: "success" });
-  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", assignType: "branch", view_branches: [], view_cells: [], password: "" });
-  const [newDistrict,   setNewDistrict]   = useState("");
+  const [uForm, setUForm] = useState({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", assignType: "branch", view_branches: [], view_cells: [], password: "" });  const [newDistrict,   setNewDistrict]   = useState("");
   const [newBranch,     setNewBranch]     = useState("");
   const [newBranchDist, setNewBranchDist] = useState("");
   const [newCell,       setNewCell]       = useState("");
@@ -960,7 +959,6 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
 
   const showMsg = (text, type = "success") => { setSaveMsg({ text, type }); setTimeout(() => setSaveMsg({ text: "", type: "success" }), 10000); };
   const clearForm = () => setUForm({ name: "", email: "", role: "capturer", branch: "", cell: "", district: "", assignType: "branch", view_branches: [], view_cells: [], password: "" });
-
   const saveUser = async () => {
     if (!uForm.name || !uForm.email || !uForm.password) { showMsg("❌ Name, email and password are required.", "error"); return; }
     console.log("SAVING USER — assignType:", uForm.assignType, "branch:", uForm.branch, "cell:", uForm.cell);
