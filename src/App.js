@@ -405,8 +405,8 @@ function EntryPage({ user, branches, cells, onSaved }) {
                 ))}
               </select>
             </div>
-          ) : user.cell && !user.branch ? (
-            /* Cell capturer — show their cell, no branch selector */
+          ) : user.cell ? (
+            /* Cell capturer — show their cell only (cell takes priority over branch */
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Cell</label>
               <div style={{ padding: "12px 14px", border: `2px solid ${C.blue}`, borderRadius: 8, fontSize: 14, background: C.bluePale, fontWeight: 700, color: C.blue }}>🔵 {user.cell}</div>
@@ -505,6 +505,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   const [selBranch, setSelBranch] = useState("");
   const [selCell,   setSelCell]   = useState("");
   const [selDate,   setSelDate]   = useState("");
+  const [dashView,  setDashView]  = useState("branches"); // "branches" | "cells"
 
   // 1. All dates across all stats (for dropdown)
   const allDates = [...new Set(stats.map(s => s.date))].sort().reverse();
@@ -519,8 +520,8 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   const isAdmin      = user.role === "admin";
   const isViewer     = user.role === "viewer";
   const isCapturer   = user.role === "capturer";
-  const userIsCell   = isCapturer && !!user.cell && !user.branch;  // cell-only capturer
-  const userIsBranch = isCapturer && !!user.branch && !user.cell;  // branch-only capturer
+  const userIsCell   = isCapturer && !!user.cell;                   // cell takes priority
+  const userIsBranch = isCapturer && !!user.branch && !user.cell;  // branch capturer (no cell)
   const viewBranches = isViewer ? (() => { try { return JSON.parse(user.view_branches||"[]"); } catch { return []; } })() : [];
   const viewCells_   = isViewer ? (() => { try { return JSON.parse(user.view_cells||"[]"); } catch { return []; } })() : [];
 
@@ -545,10 +546,13 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
       if (activeBranch) return base.filter(s => s.branch === activeBranch);
       return base;
     }
-    // admin — filter by selected branch/cell
-    if (activeCell)   return statsForDate.filter(s => s.cell   === activeCell);
+    // admin/viewer — filter by selected branch or cell based on dashView
+    if (dashView === "cells") {
+      if (activeCell) return statsForDate.filter(s => s.cell === activeCell);
+      return statsForDate.filter(s => !!s.cell); // show all cell stats
+    }
     if (activeBranch) return statsForDate.filter(s => s.branch === activeBranch);
-    return statsForDate;
+    return statsForDate.filter(s => !s.cell); // branch view: exclude cell-only records
   })();
 
   // 5. Sum everything in filteredStats → these are the KPI totals
@@ -569,7 +573,12 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   // 6. Previous date totals for comparison arrows
   const prevDate   = allDates[allDates.indexOf(activeDate) + 1] || "";
   const prevStats  = prevDate
-    ? stats.filter(s => s.date === prevDate && (activeBranch ? s.branch === activeBranch : true))
+    ? stats.filter(s => {
+        if (s.date !== prevDate) return false;
+        if (isCapturer) return userIsCell ? s.cell === user.cell : s.branch === user.branch;
+        if (dashView === "cells") return selCell ? s.cell === selCell : !!s.cell;
+        return selBranch ? s.branch === selBranch : !s.cell;
+      })
     : [];
   const prevTotals = prevStats.reduce((acc, s) => {
     const ac = s.alter_call || s.alterCall || {};
@@ -587,7 +596,12 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   // 7. Trend chart — last 10 dates, summed per date for the active branch filter
   const trendDates = allDates.slice(0, 10).reverse();
   const chartData  = trendDates.map(d => {
-    const ds = stats.filter(s => s.date === d && (activeBranch ? s.branch === activeBranch : true));
+    const ds = stats.filter(s => {
+      if (s.date !== d) return false;
+      if (isCapturer) return userIsCell ? s.cell === user.cell : s.branch === user.branch;
+      if (dashView === "cells") return selCell ? s.cell === selCell : !!s.cell;
+      return selBranch ? s.branch === selBranch : !s.cell;
+    });
     const sum = ds.reduce((a, s) => {
       const ac = s.alter_call || s.alterCall || {};
       return {
@@ -615,21 +629,36 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   return (
     <div className="fade-in">
       {/* Header + Filters */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 900 }}>
-            {isAdmin ? (activeBranch || "All Branches") : user.branch} Dashboard
+          <h2 style={{ fontSize:22, fontWeight:900 }}>
+            {isCapturer
+              ? (userIsCell ? `🔵 ${user.cell}` : `🏛️ ${user.branch}`)
+              : dashView==="cells"
+                ? (selCell ? `🔵 ${selCell}` : "All Cells")
+                : (selBranch ? `🏛️ ${selBranch}` : "All Branches")} Dashboard
           </h2>
-          <p style={{ color: C.muted, fontSize: 13 }}>
+          <p style={{ color:C.muted, fontSize:13 }}>
             Date: <strong>{activeDate}</strong>
-            {hasPrev && <span style={{ marginLeft: 8, color: C.muted }}>· prev: {prevDate}</span>}
+            {hasPrev && <span style={{ marginLeft:8, color:C.muted }}>· prev: {prevDate}</span>}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {isAdmin && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <select value={selBranch} onChange={e => setSelBranch(e.target.value)}
-                style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "Lato,sans-serif", background: "#fff", cursor: "pointer" }}>
+        {/* Filters — admin/viewer only */}
+        {(isAdmin || isViewer) && (
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+            {/* Branches / Cells toggle */}
+            <div style={{ display:"flex", gap:6 }}>
+              {[{id:"branches",label:"🏛️ Branches"},{id:"cells",label:"🔵 Cells"}].map(t=>(
+                <button key={t.id} onClick={()=>{ setDashView(t.id); setSelBranch(""); setSelCell(""); }}
+                  style={{ padding:"7px 14px", borderRadius:8, border:`2px solid ${dashView===t.id?C.blue:C.border}`, background:dashView===t.id?C.blue:"#fff", color:dashView===t.id?"#fff":C.muted, fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"Lato,sans-serif", whiteSpace:"nowrap" }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {/* Branch selector */}
+            {dashView === "branches" && (
+              <select value={selBranch} onChange={e=>{ setSelBranch(e.target.value); setSelCell(""); }}
+                style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", fontSize:13, fontFamily:"Lato,sans-serif", background:"#fff", cursor:"pointer" }}>
                 <option value="">All Branches</option>
                 {[...new Set((branches||[]).map(b=>b.district||"Other"))].map(dist=>(
                   <optgroup key={dist} label={`🗺️ ${dist}`}>
@@ -639,11 +668,30 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
                   </optgroup>
                 ))}
               </select>
-            </div>
-          )}
+            )}
+            {/* Cell selector */}
+            {dashView === "cells" && (
+              <select value={selCell} onChange={e=>{ setSelCell(e.target.value); setSelBranch(""); }}
+                style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", fontSize:13, fontFamily:"Lato,sans-serif", background:"#fff", cursor:"pointer" }}>
+                <option value="">All Cells</option>
+                {[...new Set((cells||[]).map(cl=>cl.district||"Other"))].map(dist=>(
+                  <optgroup key={dist} label={`🗺️ ${dist}`}>
+                    {(cells||[]).filter(cl=>(cl.district||"Other")===dist).map(cl=>(
+                      <option key={cl.name} value={cl.name}>{cl.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            )}
+            {/* Date */}
+            <Select value={selDate} onChange={setSelDate}
+              options={[{ value:"", label:"Latest Date" }, ...allDates.map(d=>({ value:d, label:d }))]} />
+          </div>
+        )}
+        {isCapturer && (
           <Select value={selDate} onChange={setSelDate}
-            options={[...allDates.map(d => ({ value: d, label: d }))]} />
-        </div>
+            options={[{ value:"", label:"Latest Date" }, ...allDates.map(d=>({ value:d, label:d }))]} />
+        )}
       </div>
 
       {/* KPI Strip */}
@@ -906,7 +954,7 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
     const cleanUser = {
       name: uForm.name.trim(), email: uForm.email.trim().toLowerCase(),
       password: uForm.password.trim(), role: uForm.role,
-      branch: (uForm.role === "capturer" && (uForm.assignType||"branch")==="branch") ? (uForm.branch||"") : (uForm.role==="admin"?null:""),
+      branch: (uForm.role === "capturer" && (uForm.assignType||"branch")==="branch") ? (uForm.branch||"") : null,
       cell:   (uForm.role === "capturer" && (uForm.assignType||"branch")==="cell")   ? (uForm.cell||null)   : null,
       district: uForm.district || null,
       view_branches: (uForm.role === "viewer") ? JSON.stringify(uForm.view_branches || []) : null,
@@ -1548,7 +1596,7 @@ function ReportsPage({ user, stats, branches, cells, districts }) {
   // Scope stats for capturer — only their branch or cell
   const isCapturer  = user.role === "capturer";
   const capturerStats = isCapturer
-    ? (user.cell ? stats.filter(s => s.cell === user.cell) : stats.filter(s => s.branch === user.branch))
+    ? (user.cell ? stats.filter(s => s.cell === user.cell) : stats.filter(s => s.branch === (user.branch||"")))
     : stats;
 
   const buildRows = () => {
