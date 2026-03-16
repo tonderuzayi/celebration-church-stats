@@ -354,9 +354,12 @@ function EntryPage({ user, branches, cells, onSaved }) {
     setSaving(true); setErr("");
     const selBranchObj = branches.find(b => b.name === branch) || {};
     const selCellObj   = cells.find(cl => cl.name === cell) || {};
+    // For cell capturers, use cell as the primary key
+    const effectiveBranch = user.cell ? null : (branch || user.branch);
+    const effectiveCell   = user.cell || cell || null;
     const entry = {
-      id: `${branch}-${cell || "main"}-${date}`,
-      branch, cell: cell || null,
+      id: `${effectiveBranch||"cell"}-${effectiveCell||"main"}-${date}`,
+      branch: effectiveBranch, cell: effectiveCell,
       district: selBranchObj.district || selCellObj.district || null,
       date,
       attendance: { adults: n("adults"), vip: n("vip"), children: n("children") },
@@ -385,8 +388,9 @@ function EntryPage({ user, branches, cells, onSaved }) {
       <Card style={{ marginBottom: 20 }}>
         <SectionTitle>Service Details</SectionTitle>
         <div className="entry-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-          {/* Branch */}
+          {/* Branch / Cell assignment display */}
           {user.role === "admin" ? (
+            /* Admin: full branch selector grouped by district */
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Branch *</label>
               <select value={branch} onChange={e => { setBranch(e.target.value); setCell(""); }}
@@ -401,21 +405,29 @@ function EntryPage({ user, branches, cells, onSaved }) {
                 ))}
               </select>
             </div>
+          ) : user.cell && !user.branch ? (
+            /* Cell capturer — show their cell, no branch selector */
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Cell</label>
+              <div style={{ padding: "12px 14px", border: `2px solid ${C.blue}`, borderRadius: 8, fontSize: 14, background: C.bluePale, fontWeight: 700, color: C.blue }}>🔵 {user.cell}</div>
+            </div>
           ) : (
+            /* Branch capturer — show their branch, no selector */
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Branch</label>
-              <div style={{ padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, background: C.bluePale, fontWeight: 700, color: C.blue }}>{branch}</div>
+              <div style={{ padding: "12px 14px", border: `2px solid ${C.blue}`, borderRadius: 8, fontSize: 14, background: C.bluePale, fontWeight: 700, color: C.blue }}>🏛️ {user.branch}</div>
             </div>
           )}
-          {/* Cell */}
+          {/* Cell selector — only shown for admin (capturers see their assignment above) */}
+          {user.role === "admin" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Cell (optional)</label>
             <select value={cell} onChange={e => setCell(e.target.value)}
               style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px 14px", fontSize: 14, fontFamily: "Lato,sans-serif", background: "#fff" }}>
               <option value="">— No Cell —</option>
               {(() => {
-                const branchDist = (branches.find(b => b.name === branch) || {}).district;
-                const filtered   = branchDist ? cells.filter(cl => cl.district === branchDist) : cells;
+                const branchDist = ((branches||[]).find(b => b.name === branch) || {}).district;
+                const filtered   = branchDist ? (cells||[]).filter(cl => cl.district === branchDist) : (cells||[]);
                 const dists      = [...new Set(filtered.map(cl => cl.district || "Unassigned"))];
                 return dists.map(dist => (
                   <optgroup key={dist} label={"🗺️ " + dist}>
@@ -427,6 +439,7 @@ function EntryPage({ user, branches, cells, onSaved }) {
               })()}
             </select>
           </div>
+          )}
           {/* Date */}
           <Input label="Service Date" value={date} onChange={setDate} type="date" />
         </div>
@@ -489,7 +502,8 @@ function EntryPage({ user, branches, cells, onSaved }) {
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function DashboardPage({ user, stats, branches, cells, districts }) {
-  const [selBranch, setSelBranch] = useState(user.branch || "");
+  const [selBranch, setSelBranch] = useState("");
+  const [selCell,   setSelCell]   = useState("");
   const [selDate,   setSelDate]   = useState("");
 
   // 1. All dates across all stats (for dropdown)
@@ -501,15 +515,41 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
   // 3. Filter stats to the active date
   const statsForDate = stats.filter(s => s.date === activeDate);
 
-  // 4. Further filter by branch if one is selected
+  // 4. Role-based scoping
   const isAdmin      = user.role === "admin";
   const isViewer     = user.role === "viewer";
-  const viewBranches = isViewer ? (() => { try { return JSON.parse(user.view_branches||"[]"); } catch { return []; } })() : null;
-  const viewCells_   = isViewer ? (() => { try { return JSON.parse(user.view_cells||"[]"); } catch { return []; } })() : null;
-  const activeBranch = (isAdmin||isViewer) ? selBranch : user.branch;
-  const filteredStats = activeBranch
-    ? statsForDate.filter(s => s.branch === activeBranch)
-    : statsForDate; // all branches for admin with no branch selected
+  const isCapturer   = user.role === "capturer";
+  const userIsCell   = isCapturer && !!user.cell && !user.branch;  // cell-only capturer
+  const userIsBranch = isCapturer && !!user.branch && !user.cell;  // branch-only capturer
+  const viewBranches = isViewer ? (() => { try { return JSON.parse(user.view_branches||"[]"); } catch { return []; } })() : [];
+  const viewCells_   = isViewer ? (() => { try { return JSON.parse(user.view_cells||"[]"); } catch { return []; } })() : [];
+
+  // activeBranch/Cell: what admin/viewer has selected in the filter
+  const activeBranch = (isAdmin||isViewer) ? selBranch : (userIsBranch ? user.branch : "");
+  const activeCell   = (isAdmin||isViewer) ? selCell : (userIsCell ? user.cell : "");
+
+  // Scope stats based on role
+  const filteredStats = (() => {
+    if (isCapturer) {
+      // capturer sees ONLY their assigned branch OR cell
+      if (userIsCell)   return statsForDate.filter(s => s.cell   === user.cell);
+      if (userIsBranch) return statsForDate.filter(s => s.branch === user.branch);
+      return statsForDate.filter(s => s.branch === user.branch); // fallback
+    }
+    if (isViewer) {
+      const base = statsForDate.filter(s =>
+        (viewBranches.length===0 || viewBranches.includes(s.branch)) &&
+        (viewCells_.length===0   || !s.cell || viewCells_.includes(s.cell))
+      );
+      if (activeCell)   return base.filter(s => s.cell   === activeCell);
+      if (activeBranch) return base.filter(s => s.branch === activeBranch);
+      return base;
+    }
+    // admin — filter by selected branch/cell
+    if (activeCell)   return statsForDate.filter(s => s.cell   === activeCell);
+    if (activeBranch) return statsForDate.filter(s => s.branch === activeBranch);
+    return statsForDate;
+  })();
 
   // 5. Sum everything in filteredStats → these are the KPI totals
   const totals = filteredStats.reduce((acc, s) => {
@@ -866,8 +906,8 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
     const cleanUser = {
       name: uForm.name.trim(), email: uForm.email.trim().toLowerCase(),
       password: uForm.password.trim(), role: uForm.role,
-      branch: (uForm.role === "admin") ? null : (uForm.branch || ""),
-      cell:   (uForm.role === "capturer") ? (uForm.cell || null) : null,
+      branch: (uForm.role === "capturer" && (uForm.assignType||"branch")==="branch") ? (uForm.branch||"") : (uForm.role==="admin"?null:""),
+      cell:   (uForm.role === "capturer" && (uForm.assignType||"branch")==="cell")   ? (uForm.cell||null)   : null,
       district: uForm.district || null,
       view_branches: (uForm.role === "viewer") ? JSON.stringify(uForm.view_branches || []) : null,
       view_cells:    (uForm.role === "viewer") ? JSON.stringify(uForm.view_cells || []) : null,
@@ -895,7 +935,8 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
     let vb = [], vc = [];
     try { vb = JSON.parse(u.view_branches || "[]"); } catch {}
     try { vc = JSON.parse(u.view_cells || "[]"); } catch {}
-    setUForm({ name: u.name, email: u.email, role: u.role, branch: u.branch||"", cell: u.cell||"", district: u.district||"", view_branches: vb, view_cells: vc, password: u.password });
+    const assignType = u.cell ? "cell" : "branch";
+    setUForm({ name: u.name, email: u.email, role: u.role, branch: u.branch||"", cell: u.cell||"", district: u.district||"", assignType, view_branches: vb, view_cells: vc, password: u.password });
     setEditUId(u.id);
   };
   const resetUserPwd = async u => {
@@ -985,10 +1026,50 @@ function AdminPage({ branches, setBranches, districts, setDistricts, cells, setC
                 <Input label="Email"     value={uForm.email}    onChange={v => upd("email", v)}    type="email" />
                 <Input label="Password"  value={uForm.password} onChange={v => upd("password", v)} />
                 <Select label="Role" value={uForm.role} onChange={v => upd("role", v)} options={[{ value: "capturer", label: "Data Capturer" }, { value: "viewer", label: "Viewer (Read Only)" }, { value: "admin", label: "Administrator" }]} />
-                {uForm.role === "capturer" && <>
-                  <Select label="Branch" value={uForm.branch} onChange={v => upd("branch", v)} options={[{value:"",label:"— Select branch —"},...(branches||[]).map(b=>({value:b.name||b,label:`${b.name||b}${b.district?' ('+b.district+')':''}`}))]} />
-                  <Select label="Cell (optional)" value={uForm.cell||""} onChange={v => upd("cell", v)} options={[{value:"",label:"— No cell —"},...(cells||[]).map(cl=>({value:cl.name,label:`${cl.name}${cl.district?' ('+cl.district+')':''}`}))]} />
-                </>}
+                {uForm.role === "capturer" && (
+                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:1 }}>Assign To (pick ONE)</div>
+                    <div style={{ display:"flex", gap:8 }}>
+                      {["branch","cell"].map(t=>(
+                        <button key={t} type="button" onClick={()=>{ upd("assignType",t); upd("branch",""); upd("cell",""); }}
+                          style={{ flex:1, padding:"8px", borderRadius:8, border:`2px solid ${(uForm.assignType||"branch")===t?C.blue:C.border}`, background:(uForm.assignType||"branch")===t?C.bluePale:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Lato,sans-serif", color:(uForm.assignType||"branch")===t?C.blue:C.muted, textTransform:"capitalize" }}>
+                          {t==="branch"?"🏛️ Branch":"🔵 Cell"}
+                        </button>
+                      ))}
+                    </div>
+                    {(uForm.assignType||"branch")==="branch" ? (
+                      <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                        <label style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Branch</label>
+                        <select value={uForm.branch||""} onChange={e=>{upd("branch",e.target.value);upd("cell","");}}
+                          style={{border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px",fontSize:14,fontFamily:"Lato,sans-serif",background:"#fff"}}>
+                          <option value="">— Select Branch —</option>
+                          {[...new Set((branches||[]).map(b=>b.district||"Other"))].map(dist=>(
+                            <optgroup key={dist} label={`🗺️ ${dist}`}>
+                              {(branches||[]).filter(b=>(b.district||"Other")===dist).map(b=>(
+                                <option key={b.name} value={b.name}>{b.name}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                        <label style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Cell</label>
+                        <select value={uForm.cell||""} onChange={e=>{upd("cell",e.target.value);upd("branch","");}}
+                          style={{border:`1px solid ${C.border}`,borderRadius:8,padding:"12px 14px",fontSize:14,fontFamily:"Lato,sans-serif",background:"#fff"}}>
+                          <option value="">— Select Cell —</option>
+                          {[...new Set((cells||[]).map(cl=>cl.district||"Other"))].map(dist=>(
+                            <optgroup key={dist} label={`🗺️ ${dist}`}>
+                              {(cells||[]).filter(cl=>(cl.district||"Other")===dist).map(cl=>(
+                                <option key={cl.name} value={cl.name}>{cl.name}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {uForm.role === "viewer" && <>
                   <div style={{fontSize:12,fontWeight:700,color:C.muted,marginBottom:4}}>ASSIGN BRANCHES TO VIEW</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
@@ -1464,8 +1545,14 @@ function ReportsPage({ user, stats, branches, cells, districts }) {
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
   // ── Build monthly summary rows ────────────────────────────────────────────
+  // Scope stats for capturer — only their branch or cell
+  const isCapturer  = user.role === "capturer";
+  const capturerStats = isCapturer
+    ? (user.cell ? stats.filter(s => s.cell === user.cell) : stats.filter(s => s.branch === user.branch))
+    : stats;
+
   const buildRows = () => {
-    const filtered = stats.filter(s => {
+    const filtered = capturerStats.filter(s => {
       const yearMatch    = repType === "yearly" || s.date.startsWith(repYear);
       const branchMatch  = repView === "cells"
         ? (repBranch ? s.cell === repBranch : !!s.cell)
@@ -1636,26 +1723,75 @@ function ReportsPage({ user, stats, branches, cells, districts }) {
       {/* Filters */}
       <Card style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
+          {/* Report type: monthly / yearly */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Report Type</div>
             <div style={{ display: "flex", gap: 8 }}>
               {["monthly","yearly"].map(t => (
-                <button key={t} onClick={() => setRepType(t)} style={{ padding: "8px 18px", borderRadius: 8, border: `2px solid ${repType === t ? C.blue : C.border}`, background: repType === t ? C.blue : "#fff", color: repType === t ? "#fff" : C.muted, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "Lato,sans-serif", textTransform: "capitalize" }}>
+                <button key={t} onClick={() => setRepType(t)} style={{ padding: "8px 18px", borderRadius: 8, border: `2px solid ${repType===t?C.blue:C.border}`, background: repType===t?C.blue:"#fff", color: repType===t?"#fff":C.muted, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Lato,sans-serif", textTransform:"capitalize" }}>
                   {t}
                 </button>
               ))}
             </div>
           </div>
+          {/* Year — only for monthly */}
           {repType === "monthly" && (
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Year</div>
-              <Select value={repYear} onChange={setRepYear} options={years.length ? years.map(y => ({ value: y, label: y })) : [{ value: new Date().getFullYear().toString(), label: new Date().getFullYear().toString() }]} />
+              <Select value={repYear} onChange={setRepYear} options={years.length ? years.map(y=>({value:y,label:y})) : [{value:new Date().getFullYear().toString(),label:new Date().getFullYear().toString()}]} />
             </div>
           )}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>Branch</div>
-            <Select value={repBranch} onChange={setRepBranch} options={[{ value: "", label: "All Branches" }, ...(branches||[]).map(b => ({ value: b.name||b, label: b.name||b }))]}  />
-          </div>
+          {/* View toggle: Branches vs Cells — hide for capturer */}
+          {!isCapturer && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>View</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[{id:"branches",label:"🏛️ Branches"},{id:"cells",label:"🔵 Cells"}].map(t => (
+                  <button key={t.id} onClick={() => { setRepView(t.id); setRepBranch(""); setRepDistrict(""); }}
+                    style={{ padding:"8px 16px", borderRadius:8, border:`2px solid ${repView===t.id?C.blue:C.border}`, background:repView===t.id?C.blue:"#fff", color:repView===t.id?"#fff":C.muted, fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"Lato,sans-serif" }}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* District filter — only for admin/viewer */}
+          {!isCapturer && (districts||[]).length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>District</div>
+              <select value={repDistrict} onChange={e => { setRepDistrict(e.target.value); setRepBranch(""); }}
+                style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", fontSize:13, fontFamily:"Lato,sans-serif", background:"#fff", cursor:"pointer" }}>
+                <option value="">All Districts</option>
+                {(districts||[]).map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+              </select>
+            </div>
+          )}
+          {/* Branch or Cell filter */}
+          {!isCapturer && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>
+                {repView === "cells" ? "Cell" : "Branch"}
+              </div>
+              <select value={repBranch} onChange={e => setRepBranch(e.target.value)}
+                style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", fontSize:13, fontFamily:"Lato,sans-serif", background:"#fff", cursor:"pointer" }}>
+                <option value="">{repView==="cells" ? "All Cells" : "All Branches"}</option>
+                {repView === "cells"
+                  ? (cells||[]).filter(cl => !repDistrict || cl.district===repDistrict).map(cl => (
+                      <option key={cl.name} value={cl.name}>{cl.name}{cl.district ? ` (${cl.district})` : ""}</option>
+                    ))
+                  : (branches||[]).filter(b => !repDistrict || b.district===repDistrict).map(b => (
+                      <option key={b.name||b} value={b.name||b}>{b.name||b}{b.district ? ` (${b.district})` : ""}</option>
+                    ))
+                }
+              </select>
+            </div>
+          )}
+          {/* Capturer sees their assignment label */}
+          {isCapturer && (
+            <div style={{ background:C.bluePale, borderRadius:8, padding:"10px 16px", fontSize:14, fontWeight:700, color:C.blueDark }}>
+              Showing: {user.cell ? `🔵 ${user.cell}` : `🏛️ ${user.branch}`}
+            </div>
+          )}
         </div>
       </Card>
 
