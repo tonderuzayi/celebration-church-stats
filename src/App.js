@@ -324,7 +324,8 @@ function Sidebar({ page, setPage, user, onLogout }) {
       <div className="sidebar-footer" style={{ padding: "16px 20px", borderTop: "1px solid rgba(255,255,255,.1)" }}>
         <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginBottom: 2 }}>{user.role === "admin" ? "Administrator" : "Data Capturer"}</div>
         <div style={{ fontSize: 13, color: "#fff", fontWeight: 700, marginBottom: 10 }}>{user.name}</div>
-        {user.branch && <div style={{ fontSize: 11, color: C.accent, marginBottom: 10 }}>{user.branch}</div>}
+        {user.cell   && <div style={{ fontSize: 11, color: C.accent, marginBottom: 10 }}>🔵 {user.cell}</div>}
+        {!user.cell && user.branch && <div style={{ fontSize: 11, color: C.accent, marginBottom: 10 }}>🏛️ {user.branch}</div>}
         <Btn variant="secondary" onClick={onLogout} style={{ width: "100%", fontSize: 12, background: "rgba(255,255,255,.1)", color: "#fff" }}>Sign Out</Btn>
       </div>
     </div>
@@ -336,7 +337,8 @@ const EMPTY_FORM = { adults: "", vip: "", children: "", salvations: "", rededica
 
 function EntryPage({ user, branches, cells, onSaved }) {
   const today = new Date().toISOString().split("T")[0];
-  const [branch, setBranch] = useState(user.branch || (branches[0]?.name) || "");
+  // If user has a cell, branch must be empty regardless of what DB has
+  const [branch, setBranch] = useState(user.cell ? "" : (user.branch || ""));
   const [cell,   setCell]   = useState(user.cell || "");
   const [date, setDate]     = useState(today);
   const [form, setForm]     = useState(EMPTY_FORM);
@@ -1431,10 +1433,16 @@ function ProfilePage({ user, setUser }) {
               <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Role</div>
               <div><Badge color={user.role === "admin" ? C.accent : C.blue}>{user.role === "admin" ? "Administrator" : "Data Capturer"}</Badge></div>
             </div>
-            {user.branch && (
+            {user.cell && (
+              <div style={{ background: C.bluePale, borderRadius: 10, padding: "16px 18px" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Cell</div>
+                <div style={{ fontSize: 15, color: C.blueDark }}>🔵 {user.cell}</div>
+              </div>
+            )}
+            {!user.cell && user.branch && (
               <div style={{ background: C.bluePale, borderRadius: 10, padding: "16px 18px" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Branch</div>
-                <div style={{ fontSize: 15, color: C.blueDark }}>{user.branch}</div>
+                <div style={{ fontSize: 15, color: C.blueDark }}>🏛️ {user.branch}</div>
               </div>
             )}
           </div>
@@ -1977,7 +1985,10 @@ export default function App() {
       if (data.length) {
         const u = data[0];
         // Safety: if user has a cell assigned, clear branch from memory so it never bleeds into UI
-        const cleanUser = u.cell ? { ...u, branch: null } : u;
+        // Always: if cell is set, branch must be null — no matter what DB says
+        const cleanUser = u.cell
+          ? { ...u, branch: null, _assignedTo: "cell", _assignment: u.cell }
+          : { ...u, cell: null,   _assignedTo: "branch", _assignment: u.branch };
         setUser(cleanUser); setPage("dashboard"); setLoading(false); return true;
       }
     } catch (e) { console.error("Login error:", e); }
