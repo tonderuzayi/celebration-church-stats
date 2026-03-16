@@ -502,10 +502,11 @@ function EntryPage({ user, branches, cells, onSaved }) {
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function DashboardPage({ user, stats, branches, cells, districts }) {
-  const [selBranch, setSelBranch] = useState("");
-  const [selCell,   setSelCell]   = useState("");
-  const [selDate,   setSelDate]   = useState("");
-  const [dashView,  setDashView]  = useState("branches"); // "branches" | "cells"
+  const [selBranch,   setSelBranch]   = useState("");
+  const [selCell,     setSelCell]     = useState("");
+  const [selDate,     setSelDate]     = useState("");
+  const [dashView,    setDashView]    = useState("branches"); // "branches" | "cells"
+  const [selDistrict, setSelDistrict] = useState("");
 
   // 1. All dates across all stats (for dropdown)
   const allDates = [...new Set(stats.map(s => s.date))].sort().reverse();
@@ -546,13 +547,14 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
       if (activeBranch) return base.filter(s => s.branch === activeBranch);
       return base;
     }
-    // admin/viewer — filter by selected branch or cell based on dashView
+    // admin/viewer — filter by district → then branch or cell based on dashView
+    const districtBase = selDistrict ? statsForDate.filter(s => s.district === selDistrict) : statsForDate;
     if (dashView === "cells") {
-      if (activeCell) return statsForDate.filter(s => s.cell === activeCell);
-      return statsForDate.filter(s => !!s.cell); // show all cell stats
+      if (activeCell)   return districtBase.filter(s => s.cell === activeCell);
+      return districtBase.filter(s => !!s.cell);
     }
-    if (activeBranch) return statsForDate.filter(s => s.branch === activeBranch);
-    return statsForDate.filter(s => !s.cell); // branch view: exclude cell-only records
+    if (activeBranch) return districtBase.filter(s => s.branch === activeBranch);
+    return districtBase.filter(s => !s.cell);
   })();
 
   // 5. Sum everything in filteredStats → these are the KPI totals
@@ -576,6 +578,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
     ? stats.filter(s => {
         if (s.date !== prevDate) return false;
         if (isCapturer) return userIsCell ? s.cell === user.cell : s.branch === user.branch;
+        if (selDistrict && s.district !== selDistrict) return false;
         if (dashView === "cells") return selCell ? s.cell === selCell : !!s.cell;
         return selBranch ? s.branch === selBranch : !s.cell;
       })
@@ -599,6 +602,7 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
     const ds = stats.filter(s => {
       if (s.date !== d) return false;
       if (isCapturer) return userIsCell ? s.cell === user.cell : s.branch === user.branch;
+      if (selDistrict && s.district !== selDistrict) return false;
       if (dashView === "cells") return selCell ? s.cell === selCell : !!s.cell;
       return selBranch ? s.branch === selBranch : !s.cell;
     });
@@ -634,9 +638,11 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
           <h2 style={{ fontSize:22, fontWeight:900 }}>
             {isCapturer
               ? (userIsCell ? `🔵 ${user.cell}` : `🏛️ ${user.branch}`)
-              : dashView==="cells"
-                ? (selCell ? `🔵 ${selCell}` : "All Cells")
-                : (selBranch ? `🏛️ ${selBranch}` : "All Branches")} Dashboard
+              : selDistrict
+                ? `🗺️ ${selDistrict} · ${dashView==="cells" ? (selCell||"All Cells") : (selBranch||"All Branches")}`
+                : dashView==="cells"
+                  ? (selCell ? `🔵 ${selCell}` : "All Cells")
+                  : (selBranch ? `🏛️ ${selBranch}` : "All Branches")} Dashboard
           </h2>
           <p style={{ color:C.muted, fontSize:13 }}>
             Date: <strong>{activeDate}</strong>
@@ -649,38 +655,42 @@ function DashboardPage({ user, stats, branches, cells, districts }) {
             {/* Branches / Cells toggle */}
             <div style={{ display:"flex", gap:6 }}>
               {[{id:"branches",label:"🏛️ Branches"},{id:"cells",label:"🔵 Cells"}].map(t=>(
-                <button key={t.id} onClick={()=>{ setDashView(t.id); setSelBranch(""); setSelCell(""); }}
+                <button key={t.id} onClick={()=>{ setDashView(t.id); setSelBranch(""); setSelCell(""); setSelDistrict(""); }}
                   style={{ padding:"7px 14px", borderRadius:8, border:`2px solid ${dashView===t.id?C.blue:C.border}`, background:dashView===t.id?C.blue:"#fff", color:dashView===t.id?"#fff":C.muted, fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"Lato,sans-serif", whiteSpace:"nowrap" }}>
                   {t.label}
                 </button>
               ))}
             </div>
-            {/* Branch selector */}
+            {/* District filter */}
+            {(districts||[]).length > 0 && (
+              <select value={selDistrict} onChange={e=>{ setSelDistrict(e.target.value); setSelBranch(""); setSelCell(""); }}
+                style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", fontSize:13, fontFamily:"Lato,sans-serif", background:"#fff", cursor:"pointer" }}>
+                <option value="">All Districts</option>
+                {(districts||[]).map(d=>(
+                  <option key={d.name} value={d.name}>🗺️ {d.name}</option>
+                ))}
+              </select>
+            )}
+            {/* Branch selector — filtered by selDistrict if set */}
             {dashView === "branches" && (
               <select value={selBranch} onChange={e=>{ setSelBranch(e.target.value); setSelCell(""); }}
                 style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", fontSize:13, fontFamily:"Lato,sans-serif", background:"#fff", cursor:"pointer" }}>
                 <option value="">All Branches</option>
-                {[...new Set((branches||[]).map(b=>b.district||"Other"))].map(dist=>(
-                  <optgroup key={dist} label={`🗺️ ${dist}`}>
-                    {(branches||[]).filter(b=>(b.district||"Other")===dist).map(b=>(
-                      <option key={b.name||b} value={b.name||b}>{b.name||b}</option>
-                    ))}
-                  </optgroup>
-                ))}
+                {(branches||[])
+                  .filter(b => !selDistrict || b.district === selDistrict)
+                  .map(b=>( <option key={b.name||b} value={b.name||b}>{b.name||b}</option> ))
+                }
               </select>
             )}
-            {/* Cell selector */}
+            {/* Cell selector — filtered by selDistrict if set */}
             {dashView === "cells" && (
               <select value={selCell} onChange={e=>{ setSelCell(e.target.value); setSelBranch(""); }}
                 style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", fontSize:13, fontFamily:"Lato,sans-serif", background:"#fff", cursor:"pointer" }}>
                 <option value="">All Cells</option>
-                {[...new Set((cells||[]).map(cl=>cl.district||"Other"))].map(dist=>(
-                  <optgroup key={dist} label={`🗺️ ${dist}`}>
-                    {(cells||[]).filter(cl=>(cl.district||"Other")===dist).map(cl=>(
-                      <option key={cl.name} value={cl.name}>{cl.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
+                {(cells||[])
+                  .filter(cl => !selDistrict || cl.district === selDistrict)
+                  .map(cl=>( <option key={cl.name} value={cl.name}>{cl.name}</option> ))
+                }
               </select>
             )}
             {/* Date */}
@@ -1964,7 +1974,12 @@ export default function App() {
     setLoading(true);
     try {
       const data = await db.get("cc_users", `email=eq.${encodeURIComponent(email)}&password=eq.${encodeURIComponent(password)}&limit=1`);
-      if (data.length) { setUser(data[0]); setPage("dashboard"); setLoading(false); return true; }
+      if (data.length) {
+        const u = data[0];
+        // Safety: if user has a cell assigned, clear branch from memory so it never bleeds into UI
+        const cleanUser = u.cell ? { ...u, branch: null } : u;
+        setUser(cleanUser); setPage("dashboard"); setLoading(false); return true;
+      }
     } catch (e) { console.error("Login error:", e); }
     setLoading(false);
     return false;
