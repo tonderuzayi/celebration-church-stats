@@ -352,7 +352,7 @@ function EntryPage({ user, branches, cells, onSaved }) {
   const totalOff = n("tithe") + n("offering") + n("firstFruit") + n("compassion") + n("specialAmt") + n("otherAmt");
 
   const submit = async () => {
-    if (!branch) { setErr("Please select a branch."); return; }
+    if (!branch && !user.cell) { setErr("Please select a branch."); return; }
     setSaving(true); setErr("");
     const selBranchObj = branches.find(b => b.name === branch) || {};
     const selCellObj   = cells.find(cl => cl.name === cell) || {};
@@ -495,7 +495,7 @@ function EntryPage({ user, branches, cells, onSaved }) {
           style={{ width: "100%", border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, minHeight: 90, resize: "vertical", fontFamily: "Lato,sans-serif" }} />
       </Card>
 
-      <Btn onClick={submit} disabled={saving || !branch} style={{ padding: "12px 32px", fontSize: 15 }}>
+      <Btn onClick={submit} disabled={saving || (!branch && !user.cell)} style={{ padding: "12px 32px", fontSize: 15 }}>
         {saving ? "Saving…" : "Save Statistics"}
       </Btn>
     </div>
